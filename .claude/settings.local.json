@@ -1,0 +1,14 @@
+{
+  "env": {
+    "ECC_DISABLED_HOOKS": "pre:edit-write:gateguard-fact-force"
+  },
+  "permissions": {
+    "allow": [
+      "Read(//c/Users/mohan/.claude/**)",
+      "Read(//c/Users/mohan/.claude/plugins/**)",
+      "Bash(node scripts/ci/catalog.js --json)",
+      "Bash(echo \"exit:$?\")",
+      "Read(//tmp/**)"
+    ]
+  }
+}

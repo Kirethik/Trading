@@ -1,0 +1,24 @@
+# Credentials — never commit
+.env
+Api key and others.txt
+
+# Runtime artifacts
+logs/
+state/
+data_cache/
+runs/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ecc_catalog_tmp.json
+.ecc_skills_desc.txt
+
+# Windows junk files
+bin
+del
+dir
+echo
+node_modules
+npm
+rmdir
+where

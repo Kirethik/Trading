@@ -1,0 +1,125 @@
+# ============================================================
+# Regime-Trader — single source of truth for every tunable.
+# Credentials are NOT here; they come from .env / environment.
+# ============================================================
+
+universe:
+  equities: [SPY, QQQ, AAPL, MSFT, AMZN, GOOGL, NVDA, META, TSLA, AMD]
+  market_proxy: SPY                # regime model is fit on this symbol
+  etf_rotation: [SPY, QQQ, IWM, EFA, EEM, TLT, GLD]   # TAA challenger universe
+  sectors:                         # for correlated/sector exposure caps
+    SPY: index
+    QQQ: index
+    IWM: index
+    EFA: index
+    EEM: index
+    TLT: bonds
+    GLD: commodity
+    AAPL: tech
+    MSFT: tech
+    AMZN: tech
+    GOOGL: tech
+    NVDA: tech
+    META: tech
+    TSLA: auto
+    AMD: tech
+
+data:
+  timeframe: 1Day
+  history_start: "2016-01-01"
+  cache_dir: data_cache
+  feed: sip                        # falls back to iex automatically on permission error
+  crypto_feed: us
+
+regime:
+  n_states_min: 3
+  n_states_max: 7
+  covariance_type: full
+  em_iterations: 200
+  random_restarts: 3
+  random_seed: 42
+  vol_window: 21
+  confirm_bars: 3                  # a regime change only counts after persisting this long
+  flicker_window: 10               # trailing bars in which raw switches are counted
+  flicker_max_switches: 4          # more switches than this forces uncertainty mode
+  min_train_bars: 500
+
+allocation:
+  exposure_curve:                  # gross exposure vs vol rank (piecewise-linear)
+    - [0.0, 1.30]                  # calm: fully invested, modest leverage
+    - [0.5, 1.00]                  # moderate: invested while trend intact
+    - [1.0, 0.30]                  # turbulent: reduced but never flat, never short
+  trend_sma: 200
+  trend_break_scale: 0.5           # mid-vol multiplier when market proxy < trend SMA
+  transition_scale: 0.75           # size reduction while a regime change is unconfirmed
+  uncertainty_scale: 0.5           # halve sizes under uncertainty / flicker
+  uncertainty_max_leverage: 1.0
+  weighting: inverse_vol           # inverse_vol | equal
+  rebalance_threshold: 0.02        # skip trades smaller than 2% of equity
+
+risk:
+  max_gross_exposure: 1.5
+  max_single_position: 0.20
+  max_positions: 12
+  max_daily_trades: 40
+  max_leverage: 1.5
+  max_sector_exposure: 0.45
+  correlation_lookback: 63
+  correlation_limit: 0.90          # above this vs existing book: reject
+  correlation_scale_start: 0.75    # between start and limit: scale down linearly
+  risk_per_trade: 0.01             # max equity fraction lost if the stop is hit
+  stop_atr_mult: 2.5
+  atr_window: 14
+  overnight_gap_risk: 0.03         # assumed adverse overnight gap, widens sizing stop
+  breakers:
+    daily_reduce: -0.02            # tiered circuit breakers on actual P&L
+    daily_halt: -0.04
+    weekly_reduce: -0.05
+    weekly_halt: -0.08
+    peak_lock: -0.15               # hard peak-drawdown lock, manual release required
+  lock_file: state/breaker.lock
+
+backtest:
+  train_bars: 756                  # ~3y rolling train window
+  test_bars: 63                    # ~1 quarter out-of-sample
+  step_bars: 63
+  slippage_bps: 5
+  fill_delay_bars: 1               # signals fill on the NEXT bar's open
+  initial_capital: 100000
+  commission: 0.0                  # explicit commission-free assumption
+  random_benchmark_seeds: 20
+
+ensemble:
+  min_sharpe_to_vote: 0.3          # challengers below this never enter the ensemble
+  method: rank_weighted            # confidence_weighted | rank_weighted | equal
+  keep_only_if_beats_best: true
+
+broker:
+  paper: true                      # live requires typed confirmation, see cli.py
+  live_confirmation_phrase: "I-UNDERSTAND-LIVE-TRADING"
+  order_type: limit
+  limit_offset_bps: 10
+  order_timeout_seconds: 60
+  max_retries: 3
+  retry_backoff_seconds: [1, 5, 15]
+
+omnivore:
+  enabled: true
+  capital_per_strategy: 2000
+  max_strategies: 60
+  crypto_universe: ["BTC/USD", "ETH/USD", "LTC/USD", "DOGE/USD", "AVAX/USD", "LINK/USD"]
+  ledger_file: state/omnivore_ledger.json
+
+monitoring:
+  log_dir: logs
+  alert_rate_limit_seconds: 300
+  webhook_url: ""
+  dashboard_refresh_seconds: 5
+
+advisory:                          # web-sourced signals: shrink-only, never override veto
+  enabled: false
+  vix_calm: 15
+  vix_stressed: 25
+
+state_dir: state
+runs_dir: runs
