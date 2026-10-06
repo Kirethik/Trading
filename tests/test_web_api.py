@@ -724,3 +724,13 @@ def test_reporter_page_shows_reading_conclusions_and_actions_with_reasons(client
 
 def test_news_endpoint_requires_auth(client):
     assert client.get("/api/news").status_code == 401
+
+
+def test_diary_shows_which_free_ai_answered(client, web_env):
+    from regime_trader.utils import utc_now_iso
+    (web_env / "state" / "agent_audit.jsonl").write_text(json.dumps({
+        "ts": utc_now_iso(), "agent": "validation", "outcome": "ok", "subject": "s",
+        "model": "groq:openai/gpt-oss-120b", "output": {"stance": "against", "points": ["p"], "confidence": "high"}}) + "\n")
+    _login(client)
+    assert client.get("/api/agents/validation").json()["diary"][0]["via"] == "Groq · gpt-oss-120b"
+    assert client.get("/api/agents").json()["providers"] == []      # test config: no providers section

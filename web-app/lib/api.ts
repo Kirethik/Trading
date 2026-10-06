@@ -215,7 +215,9 @@ export interface AgentStats {
   lessons: number;
 }
 
-export interface DiaryItem { when: string | null; headline: string; detail: string; tone: Tone }
+export interface DiaryItem { when: string | null; headline: string; detail: string; tone: Tone; via?: string }
+
+export interface ProviderUsage { label: string; used: number; cap: number; resting_until: string | null }
 
 export interface AgentLesson { when: string; lesson: string; evidence: string; confidence: string }
 
@@ -272,6 +274,7 @@ export interface AgentTeamPayload {
   latest_debate: Debate | null;
   watch: WatchStatus;
   news: NewsAction[];
+  providers: ProviderUsage[];
   team: Pick<AgentActivityPayload, "budget" | "supervisor" | "kill_switch" | "sleeve">;
 }
 

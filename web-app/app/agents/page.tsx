@@ -1,7 +1,7 @@
 "use client";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { api, type AgentEvent, type AgentTeamPayload } from "@/lib/api";
+import { api, type AgentEvent, type AgentTeamPayload, type ProviderUsage } from "@/lib/api";
 import { fmt } from "@/lib/format";
 import { AuthGate } from "@/components/ui/AuthGate";
 import { Skeleton, Table } from "@/components/ui/data";
@@ -39,6 +39,38 @@ function TeamStrip({ team }: { team: AgentTeamPayload["team"] }) {
         </div>
       ))}
     </div>
+  );
+}
+
+function ProviderStrip({ items }: { items: ProviderUsage[] }) {
+  if (!items.length) return null;
+  return (
+    <section style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      <div>
+        <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>Free AI allowance today</h2>
+        <p style={{ fontSize: 13, color: "var(--text-muted)", margin: "2px 0 0" }}>
+          Every AI helper runs on free plans. When one runs out, the next takes over; if all are out, the normal rules decide.
+        </p>
+      </div>
+      <div style={{ display: "grid", gap: 10, gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 220px), 1fr))" }}>
+        {items.map((p) => {
+          const pct = p.cap ? Math.min(1, p.used / p.cap) : 0;
+          const resting = Boolean(p.resting_until);
+          const color = resting ? "var(--warn)" : pct >= 0.9 ? "var(--loss)" : "var(--accent)";
+          return (
+            <div key={p.label} style={{ padding: "10px 12px", borderRadius: 10, background: "var(--bg-surface)", border: "1px solid var(--border)" }}>
+              <div style={{ fontSize: 13, fontWeight: 600 }}>{p.label}</div>
+              <div className="tabnum" style={{ fontSize: 12, color: "var(--text-secondary)", marginTop: 2 }}>
+                {p.used} of {p.cap} used{resting ? ` · resting until ${new Date(p.resting_until as string).toLocaleTimeString()}` : ""}
+              </div>
+              <div style={{ height: 4, borderRadius: 99, background: "var(--bg-elevated)", marginTop: 8 }}>
+                <div style={{ width: `${pct * 100}%`, height: "100%", borderRadius: 99, background: color }} />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
   );
 }
 
@@ -110,6 +142,7 @@ function TeamInner() {
           </div>
           <TeamStrip team={d.team} />
           <NewsStrip items={d.news ?? []} />
+          <ProviderStrip items={d.providers ?? []} />
           <section style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>Latest debate</h2>
             {d.latest_debate ? <DebateThread debate={d.latest_debate} /> : (

@@ -261,9 +261,40 @@ agents:
   temperature: 0.2
   timeout_seconds: 120
   daily_budget_usd: 2.0            # hard cap; exceeded -> agents return None (deterministic fallback)
-  pricing:                         # USD per 1M tokens (input, output)
-    gemini-3.1-pro-preview: {input: 2.00, output: 12.00}
-    gemini-3.8-flash: {input: 0.75, output: 3.75}
+  pricing:                         # USD per 1M tokens. FREE-TIER MODE: everything is $0;
+    free: {input: 0.0, output: 0.0}   # the real limits are the per-provider request caps below
+  # ---- free-tier model routing: each agent walks its chain until one answers.
+  # Caps sit at or under each provider's free allowance (verified 2026-10-06);
+  # a 429 rests that model until its quota resets. Never rotates keys/accounts.
+  providers:
+    gemini:
+      kind: adk
+      key_env: GOOGLE_API_KEY
+      daily_requests: {gemini-3.8-flash: 18, gemini-3.7-flash: 18, gemini-2.5-flash: 18}
+    groq:                          # no retention by default; ~1000 req/day/model free
+      kind: openai
+      base_url: https://api.groq.com/openai/v1
+      key_env: GROQ_API_KEY
+      timeout_seconds: 60
+      daily_requests: {openai/gpt-oss-120b: 900, openai/gpt-oss-20b: 900, qwen/qwen3.8-27b: 900}
+    openrouter:                    # ':free' models: 50 requests/day account-wide
+      kind: openai
+      base_url: https://openrouter.ai/api/v1
+      key_env: OPENROUTER_API_KEY
+      timeout_seconds: 90
+      daily_requests: {"nvidia/nemotron-3-super-120b-a12b:free": 25, "google/gemma-4-31b-it:free": 20}
+      headers: {X-Title: regime-trader}
+    mistral:                       # no free plan on this account -> off
+      enabled: false
+      kind: openai
+      base_url: https://api.mistral.ai/v1
+      key_env: MISTRAL_API_KEY
+  routes:                          # provider:model, tried in order
+    governance: ["gemini:gemini-3.8-flash", "groq:openai/gpt-oss-120b", "openrouter:nvidia/nemotron-3-super-120b-a12b:free"]
+    validation: ["groq:openai/gpt-oss-120b", "openrouter:nvidia/nemotron-3-super-120b-a12b:free", "gemini:gemini-3.7-flash"]
+    optimization: ["groq:qwen/qwen3.8-27b", "groq:openai/gpt-oss-20b", "openrouter:google/gemma-4-31b-it:free"]
+    reporter: ["groq:openai/gpt-oss-120b", "gemini:gemini-3.7-flash", "openrouter:nvidia/nemotron-3-super-120b-a12b:free"]
+    watchman: ["groq:openai/gpt-oss-20b", "groq:openai/gpt-oss-120b", "openrouter:google/gemma-4-31b-it:free"]
   failure_alert_streak: 3          # consecutive agent failures before an AGENT alert
   max_llm_calls_per_run: 8         # caps tool loops inside one agent call
   rubric_dir: .claude/skills       # <rubric_dir>/<skill>/SKILL.md

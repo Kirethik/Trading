@@ -83,8 +83,25 @@ def _parse_ts(ts: object) -> datetime | None:
 
 
 # --------------------------------------------------------------- humanizer
+_PROVIDER_NAMES = {"groq": "Groq", "gemini": "Gemini", "openrouter": "OpenRouter", "mistral": "Mistral"}
+
+
+def friendly_model(label: object) -> str:
+    """'groq:openai/gpt-oss-120b' -> 'Groq · gpt-oss-120b'."""
+    text = str(label or "")
+    provider, sep, model = text.partition(":")
+    if not sep:
+        return f"Gemini · {text}" if text.startswith("gemini") else text
+    return f"{_PROVIDER_NAMES.get(provider, provider)} · {model.split('/')[-1].replace(':free', '')}"
+
+
 def humanize(row: dict) -> dict:
-    """One audit row -> {when, headline, detail, tone}."""
+    """One audit row -> {when, headline, detail, tone, via}."""
+    item = _humanize(row)
+    return {**item, "via": friendly_model(row.get("model")) if row.get("model") and row.get("kind") != "order" else ""}
+
+
+def _humanize(row: dict) -> dict:
     when, subject = row.get("ts"), row.get("subject") or "a strategy"
     outcome = row.get("outcome")
     if row.get("kind") == "order":
@@ -258,6 +275,28 @@ def news_feed(limit: int = 30, symbol: str | None = None) -> dict:
     return {"reading": reading, "conclusions": conclusions, "actions": actions}
 
 
+# --------------------------------------------------------------- providers
+def provider_usage() -> list[dict]:
+    """Today's free-tier usage per provider:model vs our cap, and resting state."""
+    cfg = data._cfg()
+    agents = cfg.get("agents")
+    provs = (agents.get("providers").as_dict() if agents is not None and agents.get("providers") is not None else {})
+    state = load_json(cfg.resolve_path(cfg.state_dir) / "llm_usage.json", default=None) or {}
+    today = datetime.now(timezone.utc).date().isoformat()
+    counts = state.get("counts", {}) if state.get("date") == today else {}
+    rest = state.get("rest") or {}
+    out = []
+    for name, p in provs.items():
+        if not p.get("enabled", True):
+            continue
+        for model, cap in (p.get("daily_requests") or {}).items():
+            label = f"{name}:{model}"
+            until = _parse_ts(rest.get(label))
+            out.append({"label": friendly_model(label), "used": int(counts.get(label, 0)), "cap": int(cap),
+                        "resting_until": rest.get(label) if until and until > datetime.now(timezone.utc) else None})
+    return out
+
+
 # ------------------------------------------------------------------- stats
 def _stats(rows: list[dict], name: str, kill_switch: bool) -> dict:
     now = datetime.now(timezone.utc)
@@ -315,6 +354,7 @@ def team() -> dict:
     feed = news_feed(limit=5)
     news_strip = [a for a in feed["actions"] if a["kind"] != "considered"][:3] or feed["actions"][:3]
     return {"as_of": activity["as_of"], "agents": agents, "watch": watch_status(), "news": news_strip,
+            "providers": provider_usage(),
             "latest_debate": _debate(debates[-1]) if debates else None,
             "team": {k: activity[k] for k in ("budget", "supervisor", "kill_switch", "sleeve")}}
 

@@ -19,7 +19,7 @@ from pydantic import ValidationError
 
 from ..config import get_config
 from ..monitor.log_setup import get_logger
-from . import guards
+from . import guards, providers
 from .audit import AuditLog, payload_hash
 from .budget import Budget
 from .schemas import schema_for
@@ -80,13 +80,13 @@ def _model_guard(callback_context: Any, llm_request: Any):
     return None
 
 
-def build_agent(spec: AgentSpec, system: str, output_model: Any):
+def build_agent(spec: AgentSpec, system: str, output_model: Any, model: str | None = None):
     from google.adk.agents import LlmAgent
     from google.genai import types
 
     return LlmAgent(
         name=spec.name,
-        model=spec.model_id(),
+        model=model or spec.model_id(),
         static_instruction=system,  # sent verbatim: no {state} templating of the rubric
         output_schema=output_model,
         tools=list(spec.tools),
@@ -118,13 +118,13 @@ async def collect(events: AsyncIterator[Any], author: str,
 
 
 async def adk_model_call(spec: AgentSpec, system: str, user: str, output_model: Any,
-                         usage: dict | None = None):
+                         usage: dict | None = None, model: str | None = None):
     from google.adk.agents.run_config import RunConfig
     from google.adk.runners import Runner
     from google.adk.sessions import InMemorySessionService
     from google.genai import types
 
-    agent = build_agent(spec, system, output_model)
+    agent = build_agent(spec, system, output_model, model)
     runner = Runner(app_name=APP_NAME, agent=agent,
                     session_service=InMemorySessionService(), auto_create_session=True)
     events = runner.run_async(
@@ -167,9 +167,10 @@ _SECRET = re.compile(r"(key|token|secret|authorization)[=:\s]+(?:bearer\s+)?\S+"
 
 def redact(text: str) -> str:
     """Strip credentials from provider error text before it is stored or sent."""
-    key = os.environ.get("GOOGLE_API_KEY")
-    if key:
-        text = text.replace(key, "[REDACTED]")
+    for name in ("GOOGLE_API_KEY", "GROQ_API_KEY", "OPENROUTER_API_KEY", "MISTRAL_API_KEY"):
+        key = os.environ.get(name)
+        if key:
+            text = text.replace(key, "[REDACTED]")
     return _SECRET.sub(r"\1=[REDACTED]", text)
 
 
@@ -205,9 +206,16 @@ def run_agent(spec: AgentSpec, instruction: str, payload: dict, legacy_schema: d
     budget = budget or Budget.from_config()
     audit = audit or AuditLog.from_config()
     alert = alert or _default_alert
-    model_call = model_call or adk_model_call
+    chain = None
+    if model_call is None:
+        routes = providers.routes_for(spec.name)
+        if routes:   # free-tier mode: walk this agent's provider chain
+            chain = providers.Chain(routes, gemini_call=adk_model_call)
+            model_call = chain
+        else:
+            model_call = adk_model_call
     timeout = float(timeout if timeout is not None else cfg.timeout_seconds)
-    model = spec.model_id()
+    model = spec.model_id() if chain is None else chain.routes[0].label
     try:
         summary = input_summary(payload)
     except Exception:  # dashboard nicety; never block the call on it
@@ -241,13 +249,17 @@ def run_agent(spec: AgentSpec, instruction: str, payload: dict, legacy_schema: d
             outcome, error = "invalid", redact(text[:300])
     except (asyncio.TimeoutError, TimeoutError):
         result, outcome, error = None, "timeout", f"no reply within {timeout}s"
+    except providers.AllProvidersExhausted as exc:   # free quotas used up: expected, not a fault
+        result, outcome, error = None, "blocked", redact(f"all free providers busy: {exc}")[:300]
     except Exception as exc:  # API/quota/network — degrade, never crash the caller
         result, outcome, error = None, "error", redact(f"{type(exc).__name__}: {exc}")[:300]
 
     tin, tout = usage["in"], usage["out"]
+    if chain is not None and chain.last_route is not None:
+        model = chain.last_route.label           # record who actually answered
     try:
         cost = budget.record(model, tin, tout) if (tin or tout) else 0.0
-        audit.write({**base, "outcome": outcome, "output": result, "error": error,
+        audit.write({**base, "model": model, "outcome": outcome, "output": result, "error": error,
                      "input_tokens": tin, "output_tokens": tout, "cost_usd": round(cost, 6),
                      "latency_ms": int((time.monotonic() - t0) * 1000)})
     except OSError as exc:  # disk full etc. — bookkeeping must not crash the caller

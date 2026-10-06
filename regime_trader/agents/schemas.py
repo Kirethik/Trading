@@ -120,6 +120,11 @@ class NewsAssessment(_Reply):
         return max(-2.0, min(2.0, float(v)))
 
 
+class NewsBatch(_Reply):
+    assessments: list[NewsAssessment]
+    _cap_batch = _cap(8)
+
+
 class WatchExplanation(_Reply):
     headline: str
     explanation: str
@@ -139,6 +144,7 @@ _BY_KEY: dict[str, type[_Reply]] = {
     "lessons": LessonSet,
     "headline": WatchExplanation,
     "sentiment": NewsAssessment,
+    "assessments": NewsBatch,
 }
 
 

@@ -15,7 +15,9 @@ export function DiaryTimeline({ items, color }: { items: DiaryItem[]; color: str
           <span role="img" aria-label={TONE_LABEL[it.tone]} title={TONE_LABEL[it.tone]}
                 style={{ position: "absolute", left: 0, top: 5, width: 12, height: 12, borderRadius: 99,
                          background: "var(--bg-base)", border: `3px solid ${TONE_COLOR[it.tone]}` }} />
-          <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{timeAgo(it.when)}</div>
+          <div style={{ fontSize: 11, color: "var(--text-muted)" }}>
+            {timeAgo(it.when)}{it.via ? <> · answered by <strong style={{ fontWeight: 600 }}>{it.via}</strong></> : null}
+          </div>
           <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text-primary)" }}>{it.headline}</div>
           {it.detail ? <div style={{ fontSize: 13, color: "var(--text-secondary)", marginTop: 2, lineHeight: 1.5 }}>{it.detail}</div> : null}
         </li>

@@ -240,7 +240,7 @@ def test_decisions_are_point_in_time(rep, tmp_path):
                                     published_at=NOW + timedelta(hours=2), seen_at=NOW + timedelta(hours=2),
                                     headline="future", publisher="benzinga")])
     seen = []
-    rep.assess = lambda sym, arts: seen.append([a["id"] for a in arts]) or reply(sym, 0.1)
+    rep._single = lambda sym, arts: seen.append([a["id"] for a in arts]) or reply(sym, 0.1)
     rep.tick()
     assert "alpaca:future" not in seen[0]
 
@@ -289,16 +289,17 @@ def test_failed_assessments_stay_queued_and_stop_calling_the_model(rep):
     seed(rep.store, sym="NVDA")
     seed(rep.store, sym="AAPL")
     calls = []
-    rep.assess = lambda sym, arts: calls.append(sym)          # returns None: quota exhausted
+    rep._single = lambda sym, arts: calls.append(sym)          # returns None: quota exhausted
     out = rep.tick()
-    assert len(calls) == 1 and set(out["waiting"]) == {"NVDA", "AAPL"}
-    rep.assess = lambda sym, arts: reply(sym, 0.1)
+    assert set(out["waiting"]) == {"NVDA", "AAPL"} and out["assessed"] == []
+    rep._single = lambda sym, arts: reply(sym, 0.1)
     rep.clock = lambda: NOW + timedelta(minutes=20)
     assert set(rep.tick()["assessed"]) == {"NVDA", "AAPL"}  # picked up from the queue
 
 
 def test_daily_assessment_cap(rep):
     rep.settings["max_assessments_per_day"] = 1
+    rep.settings["symbols_per_call"] = 1
     seed(rep.store, sym="NVDA"); seed(rep.store, sym="AAPL")
     rep.replies.update(NVDA=reply("NVDA", 0.1), AAPL=reply("AAPL", 0.1))
     assert len(rep.tick()["assessed"]) == 1
@@ -325,3 +326,18 @@ def test_alert_text_from_the_model_is_sanitized(rep):
     rep.replies["NVDA"] = {**reply("NVDA", 1.8), "why": "@everyone buy now https://evil.test"}
     rep.tick()
     assert all("@everyone" not in a and "https://evil" not in a for a in rep.alerts)
+
+
+def test_one_model_call_reads_several_symbols(rep):
+    seed(rep.store, sym="NVDA"); seed(rep.store, sym="AAPL")
+    calls = []
+    rep._single = None
+    import regime_trader.agents.reporter as rp
+    orig = rp._assess_batch_with_model
+    rp._assess_batch_with_model = lambda batch: calls.append(sorted(batch)) or {
+        s: reply(s, 0.1) for s in batch}
+    try:
+        out = rep.tick()
+    finally:
+        rp._assess_batch_with_model = orig
+    assert calls == [["AAPL", "NVDA"]] and set(out["assessed"]) == {"NVDA", "AAPL"}
