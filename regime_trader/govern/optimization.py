@@ -53,7 +53,7 @@ def llm_propose_params(gs: GovernedStrategy, base: float, max_candidates: int) -
         return []
     current = {a: getattr(gs.strategy, a) for a in spec}
     out = llm_bridge.escalate(
-        "Optimization Team (Sonnet)", "overfitting-detection",
+        "The Tuner (Optimization Team)", "overfitting-detection",
         f"Propose up to {max_candidates} alternative parameter sets for this strategy "
         "that are likely to improve risk-adjusted return on its symbols. Prefer robust, "
         "round values over fine-tuned ones; stay within sensible bounds (lookbacks/windows "
@@ -62,7 +62,7 @@ def llm_propose_params(gs: GovernedStrategy, base: float, max_candidates: int) -
         {"strategy": gs.key, "type": type(gs.strategy).__name__, "symbols": gs.symbols,
          "tunable_attrs": {a: ("int" if i else "float") for a, i in spec.items()},
          "current_params": current, "base_sharpe": base},
-        {"candidates": [{"<attr>": "number"}], "rationale": "string"},
+        {"candidates": [{"<attr>": "number"}], "rationale": "string"}, subject=gs.key,
     )
     if not out:
         return []
@@ -149,10 +149,10 @@ def propose(gs: GovernedStrategy, bars, oracle, deep: bool,
     rationale = f"{source} lifted Sharpe {base:.2f}->{best_sharpe:.2f} via {changes}"
     if deep:  # advisory narrative only; does not change the numeric proposal
         adv = llm_bridge.escalate(
-            "Optimization Team (Sonnet)", "overfitting-detection",
+            "The Tuner (Optimization Team)", "overfitting-detection",
             "Comment briefly on whether this parameter change risks overfitting.",
             {"strategy": gs.key, "base_sharpe": base, "changes": changes, "proposed_sharpe": best_sharpe},
-            {"caution": "string", "overfit_risk": "low|medium|high"},
+            {"caution": "string", "overfit_risk": "low|medium|high"}, subject=gs.key,
         )
         if adv:
             rationale += f" | Sonnet: {adv.get('caution', '')} (risk={adv.get('overfit_risk')})"

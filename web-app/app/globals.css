@@ -105,3 +105,33 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .bt-progress { animation: none; }
 }
+
+/* ------------------------------------------------------------- agent pages */
+@keyframes agent-pulse {
+  0%   { box-shadow: 0 0 0 0 color-mix(in srgb, var(--gain) 60%, transparent); }
+  70%  { box-shadow: 0 0 0 7px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+.agent-pulse { animation: agent-pulse 2s ease-out infinite; }
+
+.agent-card { transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease; }
+.agent-card:hover, .agent-card:focus-visible {
+  transform: translateY(-3px);
+  border-color: color-mix(in srgb, var(--agent) 60%, var(--border));
+  box-shadow: 0 14px 34px -18px var(--agent);
+  outline: none;
+}
+
+/* lessons look like ruled notebook paper with a coloured margin line */
+.notebook {
+  background:
+    linear-gradient(90deg, transparent 18px, color-mix(in srgb, var(--agent) 55%, transparent) 18px,
+                    color-mix(in srgb, var(--agent) 55%, transparent) 19px, transparent 19px),
+    repeating-linear-gradient(var(--bg-surface) 0 25px, var(--border) 25px 26px);
+  background-position: 0 0, 0 1px;   /* text baseline sits just above each rule */
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .agent-pulse { animation: none; }
+  .agent-card, .agent-card:hover { transition: none; transform: none; }
+}

@@ -603,3 +603,74 @@ def test_agent_activity_reports_audit_heartbeat_budget_and_sleeve(client, web_en
     assert body["supervisor"]["status"] == "running" and body["supervisor"]["age_seconds"] >= 0
     assert body["kill_switch"] is True
     assert body["sleeve"]["positions"]["AAPL"]["qty"] == 3
+
+
+# ------------------------------------------------------------ agent profiles
+def _seed_agents(state):
+    from regime_trader.agents.blackboard import Blackboard
+    from regime_trader.utils import utc_now_iso
+    now = utc_now_iso()
+    rows = [
+        {"ts": now, "agent": "validation", "outcome": "ok", "subject": "tsmom-eth", "cost_usd": 0.002,
+         "input_summary": {"strategy": "tsmom-eth", "sharpe": 0.85, "max_drawdown": -0.12},
+         "output": {"stance": "against", "points": ["only 40 trades"], "confidence": "high"}},
+        {"ts": now, "agent": "governance", "outcome": "ok", "subject": "tsmom-eth",
+         "output": {"decision": "HOLD", "rationale": "thin sample"}},
+        {"ts": now, "agent": "validation", "outcome": "timeout", "subject": "sma-200"},
+    ]
+    (state / "agent_audit.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows), encoding="utf-8")
+    bb = Blackboard(state / "agents.db")
+    bb.post("debate", "governance", {"key": "tsmom-eth", "metrics": {"sharpe": 0.85},
+            "advocate": {"stance": "for", "points": ["good OOS"], "confidence": "medium"},
+            "skeptic": {"stance": "against", "points": ["only 40 trades"], "confidence": "high"},
+            "verdict": {"decision": "HOLD", "rationale": "thin sample"}})
+    bb.post("lessons:validation", "validation",
+            {"lesson": "Short samples fooled me twice", "evidence": "2 retirements", "confidence": "medium"})
+
+
+def test_agents_team_requires_auth(client):
+    assert client.get("/api/agents").status_code == 401
+    assert client.get("/api/agents/validation").status_code == 401
+
+
+def test_agents_team_lists_three_personas_without_data(client):
+    _login(client)
+    body = client.get("/api/agents").json()
+    assert [a["display_name"] for a in body["agents"]] == ["The Judge", "The Tuner", "The Skeptic"]
+    assert all(a["stats"]["status"] == "not started" for a in body["agents"])
+    assert body["latest_debate"] is None
+
+
+def test_agent_profile_humanizes_diary_lessons_and_debates(client, web_env):
+    _seed_agents(web_env / "state")
+    _login(client)
+    team = client.get("/api/agents").json()
+    skeptic = next(a for a in team["agents"] if a["name"] == "validation")
+    assert skeptic["stats"]["status"] == "active" and skeptic["stats"]["tasks_this_week"] == 2
+    assert skeptic["stats"]["success_rate"] == 0.5 and skeptic["stats"]["lessons"] == 1
+    assert team["latest_debate"]["verdict"]["words"] == "wait and watch"
+
+    p = client.get("/api/agents/validation").json()
+    assert p["display_name"] == "The Skeptic"
+    heads = [d["headline"] for d in p["diary"]]
+    assert heads[0].startswith("Took too long") and "Argued against tsmom-eth" in heads[1]
+    assert p["looked_at"]["strategies"][0] == {"name": "tsmom-eth", "times": 1}
+    assert {"name": "worst drop", "times": 1} in p["looked_at"]["numbers"]
+    assert p["lessons"][0]["lesson"] == "Short samples fooled me twice"
+    assert p["debates"][0]["tuner"]["points"] == ["good OOS"]
+
+
+def test_agent_profile_unknown_name_404(client):
+    _login(client)
+    assert client.get("/api/agents/hacker").status_code == 404
+
+
+def test_agent_pages_show_only_debates_the_agent_joined(client, web_env):
+    from regime_trader.agents.blackboard import Blackboard
+    _seed_agents(web_env / "state")
+    Blackboard(web_env / "state" / "agents.db").post("debate", "governance", {
+        "key": "solo", "advocate": None, "skeptic": None, "verdict": {"decision": "HOLD", "rationale": "r"}})
+    _login(client)
+    judge = [d["strategy"] for d in client.get("/api/agents/governance").json()["debates"]]
+    skeptic = [d["strategy"] for d in client.get("/api/agents/validation").json()["debates"]]
+    assert judge == ["solo", "tsmom-eth"] and skeptic == ["tsmom-eth"]

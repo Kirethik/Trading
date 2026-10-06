@@ -173,6 +173,24 @@ def redact(text: str) -> str:
     return _SECRET.sub(r"\1=[REDACTED]", text)
 
 
+def input_summary(payload: dict, max_items: int = 8) -> dict:
+    """What the agent was shown, in brief: top-level scalars plus nested
+    metric scalars (for the dashboard's "what I looked at")."""
+    out: dict = {}
+    for k, v in payload.items():
+        if len(out) >= max_items:
+            break
+        if isinstance(v, (int, float, bool)) or v is None:
+            out[k] = v
+        elif isinstance(v, str):
+            out[k] = redact(v[:80])
+        elif isinstance(v, dict) and k in ("metrics", "live_drift"):
+            for mk, mv in v.items():
+                if isinstance(mv, (int, float)) and len(out) < max_items and mk not in out:
+                    out[mk] = round(mv, 4) if isinstance(mv, float) else mv
+    return out
+
+
 def _default_alert(message: str) -> None:
     from ..monitor.alerts import AlertKind, AlertManager
     AlertManager().send(AlertKind.AGENT, message, dedupe_key=f"agent:{message[:40]}")
@@ -181,7 +199,7 @@ def _default_alert(message: str) -> None:
 def run_agent(spec: AgentSpec, instruction: str, payload: dict, legacy_schema: dict, *,
               model_call: ModelCall | None = None, budget: Budget | None = None,
               audit: AuditLog | None = None, alert: Callable[[str], None] | None = None,
-              timeout: float | None = None) -> dict | None:
+              timeout: float | None = None, subject: str | None = None) -> dict | None:
     guards.assert_paper_only()  # raises: never silently degrade on a live account
     cfg = get_config().agents
     budget = budget or Budget.from_config()
@@ -190,7 +208,12 @@ def run_agent(spec: AgentSpec, instruction: str, payload: dict, legacy_schema: d
     model_call = model_call or adk_model_call
     timeout = float(timeout if timeout is not None else cfg.timeout_seconds)
     model = spec.model_id()
-    base = {"agent": spec.name, "model": model, "payload_hash": payload_hash(payload)}
+    try:
+        summary = input_summary(payload)
+    except Exception:  # dashboard nicety; never block the call on it
+        summary = {}
+    base = {"agent": spec.name, "model": model, "payload_hash": payload_hash(payload),
+            "subject": subject, "input_summary": summary}
 
     if guards.kill_switch_engaged():
         audit.write({**base, "outcome": "blocked", "error": "kill switch"})

@@ -1,10 +1,10 @@
-"""Governance — the Chief Decision authority (Opus 4.8 role).
+"""Governance — the Chief Decision authority (the Judge agent).
 
 Final authority over approve / reject / re-optimize / research / reduce-risk /
 increase-allocation / retire / deploy / roll-back, and over capital allocation.
 
 Rules-first: deterministic logic decides every unambiguous case and ALWAYS
-produces a valid decision. The Opus agent is consulted only for borderline
+produces a valid decision. The Judge agent (Gemini) is consulted only for borderline
 single-strategy calls and for capital allocation when more strategies qualify
 than `top_n` — and it is hard-bounded: it can never approve a strategy the
 independent Validation Team rejected, and every resulting order still passes the
@@ -17,7 +17,7 @@ from dataclasses import dataclass, field
 from ..config import get_config
 from ..monitor.log_setup import get_logger
 from ..utils import atomic_write_json, load_json, utc_now_iso
-from . import llm_bridge
+from . import debate, llm_bridge, memory
 from .registry import APPROVED, CANDIDATE, DEPLOYED, REJECTED, RETIRED, GovernanceRegistry
 
 log = get_logger("governance")
@@ -51,6 +51,28 @@ class Governance:
     def __init__(self, registry: GovernanceRegistry | None = None):
         self.cfg = get_config().governance
         self.registry = registry or GovernanceRegistry()
+        self._ledger_cache: list | None = None
+        self._lessons_cache: dict | None = None
+        self._debates_run = 0
+
+    def _ledger(self) -> list:
+        if self._ledger_cache is None:
+            self._ledger_cache = memory.load_ledger()
+        return self._ledger_cache
+
+    def _lessons(self) -> dict:
+        if self._lessons_cache is None:
+            self._lessons_cache = memory.lessons_for_all()
+        return self._lessons_cache
+
+    def _debate_enabled(self) -> bool:
+        d = self.cfg.get("debate")
+        return bool(d.get("enabled", True)) if d is not None else True
+
+    def _debate_budget_left(self) -> bool:
+        d = self.cfg.get("debate")
+        cap = int(d.get("max_per_cycle", 5)) if d is not None else 5
+        return self._debates_run < cap
 
     # ----------------------------------------------------- per-strategy
     def decide(self, reports: dict, proposals: dict, drift: dict, escalate: bool = True
@@ -94,18 +116,29 @@ class Governance:
                                   "passed all gates" + (" (borderline)" if rep.borderline else ""))
 
     def _escalate_decision(self, key, rep, drift) -> GovernanceDecision | None:
-        payload = {"strategy": key, "metrics": rep.metrics, "red_flags": rep.red_flags,
-                   "gates": rep.gates, "borderline": rep.borderline, "live_drift": drift}
-        out = llm_bridge.escalate(
-            "Chief Governance (Opus 4.8)", "governance-protocol",
-            "Decide the standing of this borderline-but-passing strategy.",
-            payload, _DECISION_SCHEMA,
-        )
+        """Borderline-but-passing only (a Validation REJECT never reaches here).
+        Tuner/Skeptic/Judge debate with memory when enabled; else one Judge call."""
+        entry = self.registry.get(key)
+        history = memory.strategy_history(key, self._ledger(), entry)
+        if self._debate_enabled():
+            if not self._debate_budget_left():
+                log.info("debate cap reached; %s decided by rules", key)
+                return None
+            self._debates_run += 1
+            out = debate.run_debate(key, rep, drift, history, self._lessons())
+            label = "Judge (after debate)"
+        else:
+            payload = {"strategy": key, "metrics": rep.metrics, "red_flags": rep.red_flags,
+                       "gates": rep.gates, "borderline": rep.borderline, "live_drift": drift,
+                       "history": history}
+            out = llm_bridge.escalate("The Judge (Chief Governance)", "governance-protocol",
+                                      "Decide the standing of this borderline-but-passing strategy.",
+                                      payload, _DECISION_SCHEMA, subject=key)
+            label = "Judge"
         if not out or out.get("decision") not in (DEPLOY, APPROVE, REDUCE_RISK, HOLD):
             return None
-        entry = self.registry.get(key)
         return GovernanceDecision(key, entry.get("source", "?"), out["decision"], 0.0,
-                                  f"Opus: {out.get('rationale', '')}", escalated=True)
+                                  f"{label}: {out.get('rationale', '')}", escalated=True)
 
     # ------------------------------------------------------- allocation
     def _allocate(self, decisions, reports, escalate) -> None:
@@ -136,7 +169,7 @@ class Governance:
                                    "max_drawdown": reports[k].metrics.get("max_drawdown")} for k in ranked],
                    "top_n": top_n}
         out = llm_bridge.escalate(
-            "Chief Governance (Opus 4.8)", "governance-protocol",
+            "The Judge (Chief Governance)", "governance-protocol",
             f"Select the {top_n} strategies to fund from these validated candidates; "
             "favor diversification and risk-adjusted return.",
             payload, {"selected": ["key", "..."], "rationale": "string"},
@@ -144,7 +177,7 @@ class Governance:
         if out and isinstance(out.get("selected"), list):
             sel = [k for k in out["selected"] if k in reports]
             if sel:
-                log.info("Opus selected %d funded strategies", len(sel))
+                log.info("Judge selected %d funded strategies", len(sel))
                 return sel[:top_n]
         return None
 

@@ -35,7 +35,8 @@ def available() -> bool:
     return True
 
 
-def escalate(role: str, skill: str, instruction: str, payload: dict, schema: dict) -> dict | None:
+def escalate(role: str, skill: str, instruction: str, payload: dict, schema: dict,
+             subject: str | None = None) -> dict | None:
     """Run one agent call; return the parsed JSON dict or None."""
     if not available():
         log.info("escalation skipped (agents unavailable): %s", role)
@@ -44,4 +45,4 @@ def escalate(role: str, skill: str, instruction: str, payload: dict, schema: dic
     if spec is None:
         log.warning("no agent registered for skill %r; deterministic fallback", skill)
         return None
-    return runtime.run_agent(spec, instruction, payload, schema)
+    return runtime.run_agent(spec, instruction, payload, schema, subject=subject)

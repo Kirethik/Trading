@@ -222,6 +222,18 @@ governance:
   agents:
     escalation_enabled: true
 
+  # borderline-but-passing strategies: Tuner argues for, Skeptic against, Judge decides
+  debate:
+    enabled: true
+    max_per_cycle: 5               # 3 model calls each; beyond this the normal rules decide
+
+  # daily: each agent compares its past calls with outcomes and writes lessons
+  reflection:
+    enabled: true
+    min_age_days: 3                # only review calls at least this old
+    lookback_days: 30
+    max_lessons: 3                 # per agent per day
+
   # daily LLM-driven improvement loop: the LLM proposes concrete parameter
   # sets for the focus cohort every day; every candidate is backtested and the
   # winner still goes through Validation + Governance like any other proposal.

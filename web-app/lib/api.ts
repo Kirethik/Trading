@@ -192,6 +192,58 @@ export interface AgentActivityPayload {
             day: { date: string; orders: number } | null };
 }
 
+// ------------------------------------------------------- agent profiles
+export type Tone = "good" | "bad" | "neutral";
+
+export interface AgentPersona {
+  name: string;
+  display_name: string;
+  title: string;
+  voice: string;
+  about: string;
+  icon: string;
+  color: string;
+  model: string;
+}
+
+export interface AgentStats {
+  status: "active" | "resting" | "paused" | "not started";
+  last_active: string | null;
+  tasks_this_week: number;
+  success_rate: number | null;
+  spend_today: number;
+  lessons: number;
+}
+
+export interface DiaryItem { when: string | null; headline: string; detail: string; tone: Tone }
+
+export interface AgentLesson { when: string; lesson: string; evidence: string; confidence: string }
+
+export interface DebateSide { stance: string | null; confidence: string | null; points: string[] }
+
+export interface Debate {
+  when: string | null;
+  strategy: string | null;
+  tuner: DebateSide | null;
+  skeptic: DebateSide | null;
+  verdict: { decision: string | null; words: string; tone: Tone; rationale: string };
+}
+
+export interface AgentTeamPayload {
+  as_of: string;
+  agents: (AgentPersona & { stats: AgentStats; latest: DiaryItem | null })[];
+  latest_debate: Debate | null;
+  team: Pick<AgentActivityPayload, "budget" | "supervisor" | "kill_switch" | "sleeve">;
+}
+
+export interface AgentProfilePayload extends AgentPersona {
+  stats: AgentStats;
+  looked_at: { strategies: { name: string; times: number }[]; numbers: { name: string; times: number }[] };
+  diary: DiaryItem[];
+  lessons: AgentLesson[];
+  debates: Debate[];
+}
+
 // ---------------------------------------------------- live portfolio / ops
 export interface PortfolioTotals {
   total_invested: number;
@@ -342,4 +394,10 @@ export const api = {
 
   agentActivity: (limit = 200): Promise<AgentActivityPayload> =>
     req(`/api/agents/activity?limit=${limit}`),
+
+  agents: (): Promise<AgentTeamPayload> =>
+    req("/api/agents"),
+
+  agent: (name: string): Promise<AgentProfilePayload> =>
+    req(`/api/agents/${encodeURIComponent(name)}`),
 };

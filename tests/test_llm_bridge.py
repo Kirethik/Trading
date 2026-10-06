@@ -33,7 +33,7 @@ def test_escalate_delegates_to_runtime(monkeypatch):
     monkeypatch.setenv("GOOGLE_API_KEY", "k")
     seen = {}
 
-    def fake_run(spec, instruction, payload, schema):
+    def fake_run(spec, instruction, payload, schema, subject=None):
         seen.update(agent=spec.name, instruction=instruction, payload=payload)
         return {"decision": "HOLD", "rationale": "r"}
 

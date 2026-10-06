@@ -3,7 +3,7 @@
 A continuous, governed research loop on top of the trading core:
 
   Data -> Research -> Optimization (Sonnet) -> INDEPENDENT Validation (Sonnet)
-       -> overfitting detection -> reports -> Governance (Opus, final authority)
+       -> overfitting detection -> reports -> Governance (Judge agent, final authority)
        -> paper reallocation (through the risk veto, never around it).
 
 Rules-first hybrid: deterministic thresholds decide the unambiguous cases;

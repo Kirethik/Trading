@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 
 
 class _Reply(BaseModel):
@@ -19,9 +19,17 @@ class _Reply(BaseModel):
         return self.model_dump()
 
 
+MAX_TEXT = 300
+
+
+def _clip_text(cls, v):
+    return v[:MAX_TEXT] if isinstance(v, str) else v
+
+
 class GovernanceDecision(_Reply):
     decision: Literal["DEPLOY", "APPROVE", "REDUCE_RISK", "HOLD"]
     rationale: str
+    _clip = field_validator("rationale", mode="before")(classmethod(_clip_text))
 
 
 class AllocationSelection(_Reply):
@@ -62,6 +70,37 @@ class ValidationVerdict(_Reply):
     reason: str
 
 
+def _cap(n: int):
+    """Over-long lists are truncated, not rejected — a 4th point shouldn't
+    throw away an otherwise good reply."""
+    return field_validator("*", mode="before")(
+        classmethod(lambda cls, v: v[:n] if isinstance(v, list) else v))
+
+
+class DebateArgument(_Reply):
+    stance: Literal["for", "against"]
+    points: list[str]
+    confidence: Literal["low", "medium", "high"]
+    _cap_points = _cap(3)
+
+    @field_validator("points", mode="after")
+    @classmethod
+    def _clip_points(cls, v: list[str]) -> list[str]:
+        return [p[:MAX_TEXT] for p in v]
+
+
+class Lesson(_Reply):
+    lesson: str
+    evidence: str
+    confidence: Literal["low", "medium", "high"]
+    _clip = field_validator("lesson", "evidence", mode="before")(classmethod(_clip_text))
+
+
+class LessonSet(_Reply):
+    lessons: list[Lesson]
+    _cap_lessons = _cap(5)
+
+
 # identifying top-level key -> strict model
 _BY_KEY: dict[str, type[_Reply]] = {
     "decision": GovernanceDecision,
@@ -69,6 +108,8 @@ _BY_KEY: dict[str, type[_Reply]] = {
     "candidates": ParamProposal,
     "caution": OverfitCaution,
     "overfit": ValidationVerdict,
+    "stance": DebateArgument,
+    "lessons": LessonSet,
 }
 
 

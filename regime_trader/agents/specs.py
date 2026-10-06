@@ -18,6 +18,18 @@ class AgentSpec:
     model_tier: str            # key into config agents.models ("pro" | "flash")
     tool_tier: ToolTier = ToolTier.READ
     tools: tuple[Callable, ...] = field(default_factory=tuple)
+    # plain-language persona for the dashboard (no jargon: the reader may not trade)
+    display_name: str = ""
+    title: str = ""            # one-line job
+    voice: str = ""            # first-person sentence
+    about: str = ""            # short paragraph
+    icon: str = ""
+    color: str = "#6366F1"
+
+    def public(self) -> dict:
+        return {"name": self.name, "display_name": self.display_name, "title": self.title,
+                "voice": self.voice, "about": self.about, "icon": self.icon, "color": self.color,
+                "model": self.model_id()}
 
     def model_id(self) -> str:
         return str(get_config().agents.models.get(self.model_tier))
@@ -34,15 +46,42 @@ class AgentSpec:
 _SPECS: dict[str, AgentSpec] = {
     s.skill: s
     for s in (
-        AgentSpec("governance", "governance-protocol",
-                  "Chief Decision & Governance agent", "pro"),
-        AgentSpec("optimization", "overfitting-detection",
-                  "Continuous Optimization Team member (advisory only)", "flash"),
-        AgentSpec("validation", "validation-pipeline",
-                  "Independent Validation Team auditor", "flash"),
+        AgentSpec(
+            "governance", "governance-protocol", "Chief Decision & Governance agent", "pro",
+            display_name="The Judge", icon="⚖️", color="#6366F1",
+            title="Makes the final call on which strategies get money",
+            voice="I listen to both sides, remember how my past calls turned out, and decide.",
+            about="When a strategy passes every safety test but only just, the Judge decides "
+                  "what happens to it: fund it, wait, or give it less money. Before deciding it "
+                  "hears the Tuner argue for the strategy and the Skeptic argue against it."),
+        AgentSpec(
+            "optimization", "overfitting-detection",
+            "Continuous Optimization Team member (advisory only)", "flash",
+            display_name="The Tuner", icon="🔧", color="#10B981",
+            title="Suggests small improvements and argues for promising strategies",
+            voice="I look for settings that could work a little better, and speak up for good ideas.",
+            about="The Tuner proposes small changes to a strategy's settings and, in debates, "
+                  "makes the case for funding a strategy. Every suggestion it makes is tested "
+                  "and checked by the Skeptic, so it can never sneak a change through."),
+        AgentSpec(
+            "validation", "validation-pipeline", "Independent Validation Team auditor", "flash",
+            display_name="The Skeptic", icon="🔍", color="#F59E0B",
+            title="Tries to prove a strategy only looks good by luck",
+            voice="My job is to find reasons NOT to trust a strategy before real money depends on it.",
+            about="The Skeptic hunts for warning signs: results that might be luck, too few "
+                  "trades, or a strategy that only works in one kind of market. It is "
+                  "deliberately hard to convince — that is what keeps the system safe."),
     )
 }
 
 
 def get_spec(skill: str) -> AgentSpec | None:
     return _SPECS.get(skill)
+
+
+def all_specs() -> list[AgentSpec]:
+    return list(_SPECS.values())
+
+
+def by_name(name: str) -> AgentSpec | None:
+    return next((s for s in _SPECS.values() if s.name == name), None)

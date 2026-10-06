@@ -46,11 +46,14 @@ class AuditLog:
             finally:
                 fcntl.flock(lock, fcntl.LOCK_UN)
 
-    def tail(self, n: int = 200) -> list[dict]:
-        if not self.path.exists():
-            return []
-        with open(self.path, "r", encoding="utf-8") as fh:
-            lines = deque(fh, maxlen=n)
+    def tail(self, n: int = 200, include_rotated: bool = False) -> list[dict]:
+        files = [self.path.with_name(self.path.name + ".1")] if include_rotated else []
+        files.append(self.path)
+        lines: deque = deque(maxlen=n)
+        for path in files:
+            if path.exists():
+                with open(path, "r", encoding="utf-8") as fh:
+                    lines.extend(fh)
         out = []
         for line in lines:
             try:

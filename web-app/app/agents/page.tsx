@@ -1,88 +1,125 @@
 "use client";
 import { useQuery } from "@tanstack/react-query";
-import { api, AgentEvent } from "@/lib/api";
+import { useState } from "react";
+import { api, type AgentEvent, type AgentTeamPayload } from "@/lib/api";
 import { fmt } from "@/lib/format";
 import { AuthGate } from "@/components/ui/AuthGate";
-import { SectionTitle, Muted, StatCard, Panel, Table, Skeleton } from "@/components/ui/data";
+import { Skeleton, Table } from "@/components/ui/data";
+import { AgentCard } from "@/components/agents/AgentCard";
+import { DebateThread } from "@/components/agents/DebateThread";
+import { timeAgo } from "@/components/agents/shared";
 
 const STALE_SECONDS = 120;
 
-function eventResult(e: AgentEvent): string {
-  return e.kind === "order" ? `order ${e.status ?? ""}` : e.outcome ?? "";
-}
-
-function eventDetail(e: AgentEvent): string {
-  if (e.kind === "order") {
-    const w = e.target_weight == null ? "" : ` → ${fmt.pct2(e.target_weight)}`;
-    return `${(e.side ?? "").toUpperCase()} ${e.symbol ?? ""}${w} · ${e.reason ?? e.rationale ?? ""}`;
-  }
-  return e.error ?? "";
-}
-
-function resultClass(e: AgentEvent): string {
-  const r = e.kind === "order" ? e.status : e.outcome;
-  if (r === "ok" || r === "submitted") return "text-gain";
-  if (r === "vetoed" || r === "error" || r === "timeout" || r === "invalid") return "text-loss";
-  return "";
-}
-
-function AgentsInner() {
-  const q = useQuery({ queryKey: ["agents", 200], queryFn: () => api.agentActivity(200), refetchInterval: 10000 });
-  const d = q.data;
-  const sup = d?.supervisor;
-  const supLabel = !sup ? "never started"
-    : sup.status !== "running" ? sup.status
-    : sup.age_seconds > STALE_SECONDS ? `stale (${Math.round(sup.age_seconds)}s)` : "running";
-  const supCls = supLabel === "running" ? "text-gain" : "text-loss";
-  const positions = Object.entries(d?.sleeve.positions ?? {}).map(([symbol, p]) => ({ symbol, ...p }));
-
+function TeamStrip({ team }: { team: AgentTeamPayload["team"] }) {
+  const sup = team.supervisor;
+  const supText = !sup ? "not started" : sup.status !== "running" ? sup.status
+    : sup.age_seconds > STALE_SECONDS ? "not responding" : "running";
+  const spentPct = team.budget.daily_usd ? Math.min(1, team.budget.spent_usd / team.budget.daily_usd) : 0;
+  const items: [string, string, string?][] = [
+    ["Spent today", `${fmt.usd2(team.budget.spent_usd)} of ${fmt.usd2(team.budget.daily_usd)} limit`],
+    ["Always-on helper", supText, supText === "running" ? "var(--gain)" : "var(--text-secondary)"],
+    ["Pause switch", team.kill_switch ? "ON — all agents paused" : "off", team.kill_switch ? "var(--warn)" : undefined],
+    ["Agents' own trades", `${Object.keys(team.sleeve.positions).length} holdings · practice money only`],
+  ];
   return (
-    <main style={{ flex: 1, padding: 16, display: "flex", flexDirection: "column", gap: 16, maxWidth: 1600, margin: "0 auto", width: "100%" }}>
-      <SectionTitle>
-        Agents <Muted>· Gemini agent runtime · paper only{d ? ` · updated ${new Date(d.as_of).toLocaleTimeString()}` : ""}</Muted>
-      </SectionTitle>
-
-      {!d ? <Skeleton h={92} /> : (
-        <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))" }}>
-          <StatCard label="Supervisor" value={supLabel} cls={supCls} />
-          <StatCard label="Kill switch" value={d.kill_switch ? "ENGAGED (paused)" : "off"} cls={d.kill_switch ? "text-loss" : ""} />
-          <StatCard label="Spend today" value={`${fmt.usd2(d.budget.spent_usd)} / ${fmt.usd2(d.budget.daily_usd)}`}
-                    cls={d.budget.spent_usd >= d.budget.daily_usd ? "text-loss" : ""} />
-          <StatCard label="Model calls today" value={String(d.budget.calls ?? 0)} />
-          <StatCard label="Agent orders today" value={String(d.sleeve.day?.orders ?? 0)} />
-          <StatCard label="Sleeve positions" value={String(positions.length)} />
+    <div style={{ display: "grid", gap: 10, gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))" }}>
+      {items.map(([label, value, color]) => (
+        <div key={label} style={{ padding: "12px 14px", borderRadius: 10, background: "var(--bg-surface)", border: "1px solid var(--border)" }}>
+          <div style={{ fontSize: 11, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em" }}>{label}</div>
+          <div style={{ fontSize: 14, fontWeight: 600, marginTop: 4, color: color ?? "var(--text-primary)" }}>{value}</div>
+          {label === "Spent today" ? (
+            <div style={{ height: 4, borderRadius: 99, background: "var(--bg-elevated)", marginTop: 8 }}>
+              <div style={{ width: `${spentPct * 100}%`, height: "100%", borderRadius: 99,
+                            background: spentPct >= 1 ? "var(--loss)" : "var(--accent)" }} />
+            </div>
+          ) : null}
         </div>
-      )}
+      ))}
+    </div>
+  );
+}
 
-      <Panel title="Agent sleeve" note="positions agents opened on the paper account (risk-checked)">
+function TechnicalLog() {
+  const [open, setOpen] = useState(false);
+  const q = useQuery({ queryKey: ["agents-activity"], queryFn: () => api.agentActivity(200),
+                       enabled: open, refetchInterval: open ? 15000 : false });
+  const rows = q.data?.events ?? [];
+  const positions = Object.entries(q.data?.sleeve.positions ?? {}).map(([symbol, p]) => ({ symbol, ...p }));
+  return (
+    <details onToggle={(e) => setOpen((e.target as HTMLDetailsElement).open)}
+             style={{ borderRadius: 10, border: "1px solid var(--border)", background: "var(--bg-surface)", padding: "10px 14px" }}>
+      <summary style={{ cursor: "pointer", fontSize: 14, fontWeight: 600 }}>
+        Technical log <span style={{ color: "var(--text-muted)", fontWeight: 400 }}>— every model call and trade attempt, unedited</span>
+      </summary>
+      <div style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 12 }}>
         <Table
           cols={["symbol", "qty", "entry", "stop", "price"]}
           rows={positions}
           fmt={(row, c) => (c === "symbol" ? row.symbol : c === "qty" ? fmt.ratio(row.qty, 4) : fmt.usd2(row[c]))}
-          empty="Agents hold no positions"
+          empty="The agents hold no positions"
         />
-      </Panel>
-
-      <Panel title="Activity" note="model calls and order attempts, newest first">
         <Table
           cols={["ts", "agent", "result", "model", "cost", "detail"]}
-          rows={d?.events ?? []}
+          rows={rows}
           fmt={(row, c) => {
             const e = row as AgentEvent;
             if (c === "ts") return String(e.ts ?? "").replace("T", " ").slice(0, 19);
-            if (c === "result") return eventResult(e);
+            if (c === "result") return e.kind === "order" ? `order ${e.status ?? ""}` : e.outcome ?? "";
             if (c === "cost") return e.cost_usd == null ? "—" : `$${e.cost_usd.toFixed(4)}`;
-            if (c === "detail") return eventDetail(e);
+            if (c === "detail") return e.kind === "order"
+              ? `${(e.side ?? "").toUpperCase()} ${e.symbol ?? ""} · ${e.reason ?? e.rationale ?? ""}` : e.error ?? "";
             return String((row as Record<string, unknown>)[c] ?? "");
           }}
-          cls={(row, c) => (c === "result" ? resultClass(row as AgentEvent) : "")}
-          empty="No agent activity yet"
+          empty={q.isLoading ? "Loading…" : "No agent activity yet"}
         />
-      </Panel>
+      </div>
+    </details>
+  );
+}
+
+function useTeam() {
+  return useQuery({ queryKey: ["agents-team"], queryFn: api.agents, refetchInterval: 15000 });
+}
+
+function TeamInner() {
+  const q = useTeam();
+  const d = q.data;
+  return (
+    <main style={{ flex: 1, padding: 16, display: "flex", flexDirection: "column", gap: 24, maxWidth: 1280, margin: "0 auto", width: "100%" }}>
+      <header>
+        <h1 style={{ fontSize: 28, fontWeight: 800, margin: 0, letterSpacing: "-0.02em" }}>Meet the team</h1>
+        <p style={{ fontSize: 15, color: "var(--text-secondary)", margin: "6px 0 0", maxWidth: 720, lineHeight: 1.55 }}>
+          Three AI helpers look after your strategies. They argue with each other before big decisions,
+          and every few days they look back at their own calls and write down what they learned.
+          They only ever use practice money, and every trade still goes through your safety checks.
+          {d ? <span style={{ color: "var(--text-muted)" }}> · updated {timeAgo(d.as_of)}</span> : null}
+        </p>
+      </header>
+
+      {q.isError ? <p style={{ color: "var(--loss)" }}>Couldn&apos;t load the team: {(q.error as Error).message}</p> : null}
+
+      {!d ? <Skeleton h={260} /> : (
+        <>
+          <div style={{ display: "grid", gap: 16, gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))" }}>
+            {d.agents.map((a) => <AgentCard key={a.name} agent={a} />)}
+          </div>
+          <TeamStrip team={d.team} />
+          <section style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>Latest debate</h2>
+            {d.latest_debate ? <DebateThread debate={d.latest_debate} /> : (
+              <p style={{ fontSize: 13, color: "var(--text-muted)", margin: 0 }}>
+                No debates yet. The team debates only when a strategy passes every safety test, but only just.
+              </p>
+            )}
+          </section>
+          <TechnicalLog />
+        </>
+      )}
     </main>
   );
 }
 
 export default function AgentsPage() {
-  return <AuthGate><AgentsInner /></AuthGate>;
+  return <AuthGate><TeamInner /></AuthGate>;
 }

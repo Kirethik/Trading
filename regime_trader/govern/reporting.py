@@ -36,7 +36,7 @@ def strategy_markdown(key, rep, decision, entry) -> str:
           f"- **market:** {entry.get('market')}  ",
           f"- **validation verdict:** **{rep.verdict}**{' (borderline)' if rep.borderline else ''}  ",
           f"- **governance decision:** **{decision.decision}**"
-          f"{' [escalated to Opus]' if decision.escalated else ''}  ",
+          f"{' [decided by the Judge agent]' if decision.escalated else ''}  ",
           f"- **allocation:** ${decision.allocation:,.0f}  ",
           f"- **tier:** {'DEEP' if rep.deep else 'cheap-daily'}  ", ""]
     if rep.reasons:

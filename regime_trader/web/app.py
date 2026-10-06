@@ -15,7 +15,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from ..config import get_config
-from . import auth, data, jobs
+from . import agent_profiles, auth, data, jobs
 from .backtest_api import router as v1_router
 
 STATIC_DIR = Path(__file__).parent / "static"
@@ -154,6 +154,19 @@ def api_decisions(limit: int = 500, _: None = Depends(require_session)) -> dict:
 @app.get("/api/agents/activity")
 def api_agents_activity(limit: int = 200, _: None = Depends(require_session)) -> dict:
     return data.load_agent_activity(limit=limit)
+
+
+@app.get("/api/agents")
+def api_agents(_: None = Depends(require_session)) -> dict:
+    return agent_profiles.team()
+
+
+@app.get("/api/agents/{name}")
+def api_agent(name: str, _: None = Depends(require_session)) -> dict:
+    prof = agent_profiles.profile(name)
+    if prof is None:
+        raise HTTPException(status_code=404, detail="no such agent")
+    return prof
 
 
 @app.get("/api/strategies")

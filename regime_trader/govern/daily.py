@@ -6,7 +6,7 @@ Order (spec §Continuous Improvement Loop):
   3. Optimization Team     -> propose param improvements (daily light / deep full)
   4-6. Validation Team     -> independently audit every strategy + overfitting,
                               produce approval/rejection reports
-  7-8. Governance (Opus)   -> review findings, make final decisions
+  7-8. Governance (Judge)  -> review findings, make final decisions
   + capital reallocation on the Alpaca PAPER account (through the risk veto)
   + reports for every strategist.
 
@@ -89,7 +89,7 @@ class DailyGovernanceCycle:
             reports[gs.key] = rep
             registry.record_validation(gs.key, rep.verdict, rep.metrics.get("sharpe"), deep)
 
-        # 7-8. governance decisions (Opus authority; escalates borderline/conflict)
+        # 7-8. governance decisions (Judge authority; escalates borderline/conflict)
         gov = Governance(registry)
         decisions = gov.decide(reports, proposals, drift)
 
@@ -104,17 +104,34 @@ class DailyGovernanceCycle:
         gov.append_ledger(decisions)
         registry.save()
 
+        # agents learn: compare their past calls with what happened (once a day)
+        lessons = self._reflect(registry)
+
         # reports for every strategist
         outdir = self._reports(reports, decisions, registry,
                                {"date": now.strftime("%Y-%m-%d"), "tier": tier,
                                 "can_trade": can_trade, "proposals": len(proposals), **applied})
         summary = {"date": now.strftime("%Y-%m-%d"), "tier": tier, "strategies": len(reports),
                    "can_trade": can_trade, "proposals": len(proposals), "applied": applied,
-                   "report_dir": str(outdir)}
+                   "lessons": lessons, "report_dir": str(outdir)}
         log.info("=== governance cycle complete ===", extra={"ctx": summary})
         return summary
 
     # ------------------------------------------------------------ helpers
+    def _reflect(self, registry) -> dict:
+        r = self.gcfg.get("reflection")
+        if r is not None and not r.get("enabled", True):
+            return {}
+        from . import llm_bridge, reflection
+
+        if not llm_bridge.available():
+            return {}
+        try:
+            return reflection.reflect_all(registry.state)
+        except Exception as exc:  # learning is optional; never fail the cycle on it
+            log.warning("agent reflection failed: %s", exc)
+            return {}
+
     def _focus_keys(self, governed) -> set[str]:
         """Strategies whose symbols sit entirely inside the improver focus set
         (e.g. the single-asset ETH cohort). Empty when the improver is off."""
