@@ -37,6 +37,7 @@ class Snapshot:
     recent_outcomes: list[str]               # newest-last agent call outcomes
     budget: dict                             # today's spend snapshot
     market_open_since: datetime | None = None  # first tick this session the market was open
+    news_cautions: dict | None = None          # symbol -> reason (Reporter cautions)
 
 
 def _norm(symbol: str) -> str:
@@ -212,7 +213,16 @@ def check_agent_health(s: Snapshot, cfg: dict) -> list[Finding]:
     return out
 
 
-CHECKS = (check_broker, check_breakers, check_daily_loss, check_exposure, check_sleeve_loss,
+def check_news_risk(s: Snapshot, cfg: dict) -> list[Finding]:
+    if not s.news_cautions:
+        return []
+    names = ", ".join(sorted(s.news_cautions))
+    return [Finding("news_caution", WARN, f"Bad news is being watched for {names}",
+                    "The Reporter found strongly negative news; agents won't buy these until it clears.",
+                    {"symbols": {k: str(v)[:200] for k, v in s.news_cautions.items()}})]
+
+
+CHECKS = (check_news_risk, check_broker, check_breakers, check_daily_loss, check_exposure, check_sleeve_loss,
           check_reconciliation, check_loop_alive, check_agent_health)
 
 

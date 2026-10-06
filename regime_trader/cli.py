@@ -385,7 +385,24 @@ def cmd_agents_supervisor(args):
     if wm is not None:
         interval = float(get_config().agents.watchman.get("interval_seconds", 300))
         sup.register(Job("watchman", interval, wm.tick))
+    from .agents import reporter
+    rp = reporter.from_config()
+    if rp is not None:
+        every = float(get_config().agents.reporter.get("interval_open_seconds", 900))
+        sup.register(Job("reporter", every, rp.tick))
     sup.run()
+
+
+def cmd_news_check(args):
+    """One Reporter run. --dry-run (default) never places an order."""
+    _setup()
+    from .agents import reporter
+
+    rp = reporter.from_config(dry_run=not args.trade)
+    if rp is None:
+        console.print("reporter disabled in config")
+        return
+    console.print_json(json.dumps(rp.tick(), indent=2, default=str))
 
 
 def cmd_research_eth(args):
@@ -539,6 +556,10 @@ def build_parser() -> argparse.ArgumentParser:
                     help="force deep validation (default: auto by weekday)")
     gd.add_argument("--no-trade", action="store_true", help="research/report only, no paper orders")
     gd.set_defaults(func=cmd_govern_daily)
+
+    nc = sub.add_parser("news-check", help="one Reporter run (dry-run unless --trade)")
+    nc.add_argument("--trade", action="store_true", help="allow paper orders (default: dry-run)")
+    nc.set_defaults(func=cmd_news_check)
 
     sub.add_parser("agents-supervisor",
                    help="always-on Gemini agent supervisor (paper only; run under systemd)"

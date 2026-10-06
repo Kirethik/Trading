@@ -281,6 +281,13 @@ agents:
     heartbeat_seconds: 30
     heartbeat_file: state/agent_supervisor.json
   pause_file: state/agents.paused  # written by the Watchman; expires on its own
+  # The Reporter: reads news, Gemini describes it, fixed rules decide.
+  reporter:
+    enabled: true
+    interval_open_seconds: 900     # every 15 min while the market is open
+    interval_closed_seconds: 3600  # hourly otherwise (crypto never sleeps)
+    max_assessments_per_run: 8     # Gemini calls per run
+    caution_hours: 24              # a caution stays active this long
   # The Watchman: always-on live oversight. Fully automatic, always warns.
   # Critical findings: pause other agents' buying + sell-only trim of the
   # agent sleeve. Never touches the main system, risk limits or the hard lock.
@@ -297,6 +304,30 @@ agents:
     trim_fraction: 0.5             # share of each agent holding sold on a critical finding
     realert_hours: 6               # repeat an unresolved alert this often
     max_explanations_per_hour: 6   # Gemini calls; beyond this the plain rule text is used
+
+# ============================================================
+# News sources for the Reporter. Credentials live in .env:
+#   EXA_API_KEY, FIRECRAWL_API_KEY (paid credits — capped below),
+#   SEC_USER_AGENT="Your Name your@email.com" (SEC requires it; no key).
+# ============================================================
+news:
+  db: state/news.db
+  lookback_hours: 48               # first fetch window
+  sources:
+    alpaca: {enabled: true, max_calls_per_day: 400}
+    sec: {enabled: true, max_calls_per_day: 300, forms: ["8-K", "4", "10-Q", "10-K"]}
+    exa: {enabled: true, max_calls_per_day: 40, results_per_query: 5}
+    firecrawl: {enabled: true, max_calls_per_day: 20}   # only to fill missing article text
+    feargreed: {enabled: true}
+  rules:
+    buy_threshold: 1.5             # sentiment (of +-2) needed to consider a buy
+    caution_threshold: -1.5
+    buy_weight: 0.05               # 5% of the agent sleeve per news buy
+    max_news_buys_per_day: 3
+    max_news_exposure: 0.40        # news-driven holdings <= 40% of the sleeve
+    min_sources: 2                 # independent sources required to buy
+    hold_days: 5                   # trading days, then exit
+    exit_sentiment: -1.0           # exit a news holding if its news turns this bad
 
 # ============================================================
 # Web dashboard (FastAPI on EC2 :80). Read-only views + graphs +

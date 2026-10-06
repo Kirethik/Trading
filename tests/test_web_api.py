@@ -636,7 +636,7 @@ def test_agents_team_requires_auth(client):
 def test_agents_team_lists_three_personas_without_data(client):
     _login(client)
     body = client.get("/api/agents").json()
-    assert [a["display_name"] for a in body["agents"]] == ["The Judge", "The Tuner", "The Skeptic", "The Watchman"]
+    assert [a["display_name"] for a in body["agents"]] == ["The Judge", "The Tuner", "The Skeptic", "The Watchman", "The Reporter"]
     assert all(a["stats"]["status"] == "not started" for a in body["agents"])
     assert body["latest_debate"] is None
 
@@ -694,3 +694,33 @@ def test_watchman_profile_shows_status_pause_and_watch_log(client, web_env):
     assert p["display_name"] == "The Watchman"
     assert p["watch_log"][0]["tone"] == "bad" and p["watch_log"][0]["actions"]
     assert "watch_log" not in client.get("/api/agents/governance").json()
+
+
+def test_reporter_page_shows_reading_conclusions_and_actions_with_reasons(client, web_env):
+    from datetime import datetime, timezone
+    from regime_trader.news.store import Article, NewsStore
+    st = NewsStore(web_env / "state" / "news.db")
+    now = datetime.now(timezone.utc)
+    st.add_articles([Article(source="alpaca", source_id="1", symbols=("NVDA",), published_at=now, seen_at=now,
+                             headline="Nvidia beats", url="https://b.test/1", publisher="benzinga"),
+                     Article(source="exa", source_id="2", symbols=("NVDA",), published_at=now, seen_at=now,
+                             headline="Bad link", url="javascript:alert(1)", publisher="evil.test")])
+    aid = st.add_assessment({"symbol": "NVDA", "as_of": now, "sentiment": 1.8, "confidence": "high",
+                             "impact": "opportunity", "why": "Record sales", "article_ids": ["alpaca:1", "exa:2"]})
+    st.add_action({"ts": now, "symbol": "NVDA", "kind": "buy", "reason": "Strongly positive, corroborated news",
+                   "assessment_id": aid, "result": "submitted",
+                   "details": {"articles": ["alpaca:1", "exa:2"], "order": {"reason": None}}})
+    _login(client)
+    news = client.get("/api/agents/reporter").json()["news"]
+    assert news["conclusions"][0]["mood"] == "very upbeat"
+    assert [s["headline"] for s in news["conclusions"][0]["supporting"]] == ["Nvidia beats", "Bad link"]
+    act = news["actions"][0]
+    assert act["headline"].startswith("Bought") and "corroborated" in act["reason"]
+    assert {a["url"] for a in news["reading"]} == {"https://b.test/1", ""}       # javascript: stripped
+    assert client.get("/api/agents").json()["news"][0]["symbol"] == "NVDA"
+    assert client.get("/api/news?symbol=NVDA").json()["actions"][0]["kind"] == "buy"
+    assert client.get("/api/news").status_code == 200
+
+
+def test_news_endpoint_requires_auth(client):
+    assert client.get("/api/news").status_code == 401

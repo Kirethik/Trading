@@ -248,11 +248,30 @@ export interface WatchEvent {
   actions: string[];
 }
 
+export interface NewsCard {
+  id: string; source: string; publisher: string; headline: string; summary: string;
+  url: string; when: string; symbols: string[];
+}
+
+export interface NewsConclusion {
+  symbol: string; when: string; sentiment: number; mood: string; tone: Tone;
+  confidence: string; why: string; supporting: NewsCard[];
+}
+
+export interface NewsAction {
+  when: string; symbol: string; kind: "buy" | "exit" | "caution" | "considered" | string;
+  headline: string; reason: string; result: string | null; tone: Tone;
+  risk_check: string | null; supporting: NewsCard[];
+}
+
+export interface NewsFeed { reading: NewsCard[]; conclusions: NewsConclusion[]; actions: NewsAction[] }
+
 export interface AgentTeamPayload {
   as_of: string;
   agents: (AgentPersona & { stats: AgentStats; latest: DiaryItem | null })[];
   latest_debate: Debate | null;
   watch: WatchStatus;
+  news: NewsAction[];
   team: Pick<AgentActivityPayload, "budget" | "supervisor" | "kill_switch" | "sleeve">;
 }
 
@@ -264,6 +283,7 @@ export interface AgentProfilePayload extends AgentPersona {
   debates: Debate[];
   watch?: WatchStatus;
   watch_log?: WatchEvent[];
+  news?: NewsFeed;
 }
 
 // ---------------------------------------------------- live portfolio / ops

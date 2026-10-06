@@ -120,6 +120,10 @@ class Governance:
         Tuner/Skeptic/Judge debate with memory when enabled; else one Judge call."""
         entry = self.registry.get(key)
         history = memory.strategy_history(key, self._ledger(), entry)
+        symbols = next((g.symbols for g in getattr(self.registry, "universe", []) if g.key == key), [])
+        news = memory.recent_news(list(symbols)) if symbols else {}
+        if news:
+            history = {**history, "recent_news": news}
         if self._debate_enabled():
             if not self._debate_budget_left():
                 log.info("debate cap reached; %s decided by rules", key)

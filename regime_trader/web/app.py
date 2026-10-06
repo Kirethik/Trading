@@ -161,6 +161,11 @@ def api_agents(_: None = Depends(require_session)) -> dict:
     return agent_profiles.team()
 
 
+@app.get("/api/news")
+def api_news(symbol: str | None = None, limit: int = 30, _: None = Depends(require_session)) -> dict:
+    return agent_profiles.news_feed(limit=max(1, min(limit, 200)), symbol=symbol)
+
+
 @app.get("/api/agents/{name}")
 def api_agent(name: str, _: None = Depends(require_session)) -> dict:
     prof = agent_profiles.profile(name)

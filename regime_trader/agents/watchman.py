@@ -103,6 +103,14 @@ class Watchman:
             budget = {}
         budget = {**budget, "daily_usd": float(cfg.agents.daily_budget_usd)}
         open_since = (memory or {}).get("market_open_since")
+        try:
+            from ..news.store import NewsStore
+            rep = cfg.agents.get("reporter")
+            hours = float(rep.get("caution_hours", 24)) if rep is not None else 24.0
+            cautions = {s: a.get("reason", "") for s, a in
+                        NewsStore.from_config().open_cautions(self.clock(), hours).items()}
+        except Exception:
+            cautions = {}
         return Snapshot(
             now=self.clock(), market_open=market_open, account_equity=equity,
             broker_positions=positions,
@@ -113,6 +121,7 @@ class Watchman:
             breaker_locked=cfg.resolve_path(cfg.risk.lock_file).exists(),
             recent_outcomes=outcomes, budget=budget,
             market_open_since=_ts(open_since, None) if open_since else None,
+            news_cautions=cautions,
         )
 
     # -------------------------------------------------------------- tick

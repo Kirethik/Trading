@@ -7,6 +7,7 @@ the exact dict the callers already sanitize.
 """
 from __future__ import annotations
 
+import math
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, field_validator
@@ -101,6 +102,24 @@ class LessonSet(_Reply):
     _cap_lessons = _cap(5)
 
 
+class NewsAssessment(_Reply):
+    symbol: str
+    sentiment: float
+    confidence: Literal["low", "medium", "high"]
+    impact: Literal["risk", "opportunity", "neutral"]
+    why: str
+    key_article_ids: list[str]
+    _clip = field_validator("why", mode="before")(classmethod(_clip_text))
+    _cap_ids = _cap(4)
+
+    @field_validator("sentiment", mode="after")
+    @classmethod
+    def _bound(cls, v: float) -> float:
+        if not math.isfinite(v):
+            raise ValueError("sentiment must be a finite number")
+        return max(-2.0, min(2.0, float(v)))
+
+
 class WatchExplanation(_Reply):
     headline: str
     explanation: str
@@ -119,6 +138,7 @@ _BY_KEY: dict[str, type[_Reply]] = {
     "stance": DebateArgument,
     "lessons": LessonSet,
     "headline": WatchExplanation,
+    "sentiment": NewsAssessment,
 }
 
 

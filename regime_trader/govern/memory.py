@@ -65,5 +65,30 @@ def recent_lessons(agent: str, n: int = 5, board: Blackboard | None = None) -> l
     return out
 
 
+def recent_news(symbols: list[str], as_of=None, per_symbol: int = 3) -> dict[str, dict]:
+    """Latest Reporter assessment + top headlines per symbol, point-in-time.
+    Model-written text, so it goes to prompts as data and is length-capped."""
+    try:
+        from ..news.store import NewsStore
+        from ..utils import utc_now
+        store = NewsStore.from_config()
+        as_of = as_of or utc_now()
+    except Exception:
+        return {}
+    out = {}
+    for sym in symbols[:6]:
+        a = store.latest_assessment(sym, as_of=as_of)
+        heads = [x["headline"][:160] for x in store.articles(symbol=sym, as_of=as_of, limit=per_symbol)]
+        if a or heads:
+            out[sym] = {"mood": a and {"sentiment": a["sentiment"], "confidence": a["confidence"],
+                                       "why": _clean(a["why"])}, "headlines": [_clean(h) for h in heads]}
+    return out
+
+
+def _clean(text: str) -> str:
+    from ..agents.execution import _safe
+    return _safe(text, 240)
+
+
 def lessons_for_all(n: int = 5, board: Blackboard | None = None) -> dict[str, list[str]]:
     return {a: recent_lessons(a, n, board) for a in ("governance", "validation", "optimization")}

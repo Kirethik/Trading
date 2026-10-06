@@ -82,6 +82,17 @@ _SPECS: dict[str, AgentSpec] = {
                   "on its own — it pauses the other agents' buying and trims their positions — "
                   "and always tells you what it did. It never touches the main system's trades "
                   "and never loosens a safety limit."),
+        AgentSpec(
+            "reporter", "news-analysis", "News Reporter (reads news, never trades directly)",
+            "flash", display_name="The Reporter", icon="📰", color="#EC4899",
+            title="Reads the news and tells everyone what it means",
+            voice="I read the news so the team doesn't have to, and I only act when several sources agree.",
+            about="The Reporter reads company and crypto news, official SEC filings and web articles, "
+                  "and works out whether each story is good or bad for a stock. Strongly bad news makes "
+                  "the team more careful. Strongly good news, confirmed by at least two independent "
+                  "sources, may lead to a small purchase with practice money in the agents' own share "
+                  "of the account. The AI only describes the news — fixed rules decide what happens, so "
+                  "a misleading article can't talk it into a trade."),
     )
 }
 

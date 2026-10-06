@@ -8,6 +8,7 @@ import { Skeleton, Table } from "@/components/ui/data";
 import { AgentCard } from "@/components/agents/AgentCard";
 import { DebateThread } from "@/components/agents/DebateThread";
 import { HealthBanner } from "@/components/agents/WatchViews";
+import { NewsStrip } from "@/components/agents/NewsViews";
 import { timeAgo } from "@/components/agents/shared";
 
 const STALE_SECONDS = 120;
@@ -91,9 +92,9 @@ function TeamInner() {
       <header>
         <h1 style={{ fontSize: 28, fontWeight: 800, margin: 0, letterSpacing: "-0.02em" }}>Meet the team</h1>
         <p style={{ fontSize: 15, color: "var(--text-secondary)", margin: "6px 0 0", maxWidth: 720, lineHeight: 1.55 }}>
-          Four AI helpers look after your strategies. Three of them argue with each other before big
-          decisions and look back at their own calls to learn; the fourth, the Watchman, keeps an eye on
-          everything while it runs and steps in when something goes wrong.
+          Five AI helpers look after your strategies. Three of them argue with each other before big
+          decisions and look back at their own calls to learn; the Watchman keeps an eye on everything
+          while it runs; and the Reporter reads the news and acts only when several sources agree.
           They only ever use practice money, and every trade still goes through your safety checks.
           {d ? <span style={{ color: "var(--text-muted)" }}> · updated {timeAgo(d.as_of)}</span> : null}
         </p>
@@ -108,6 +109,7 @@ function TeamInner() {
             {d.agents.map((a) => <AgentCard key={a.name} agent={a} />)}
           </div>
           <TeamStrip team={d.team} />
+          <NewsStrip items={d.news ?? []} />
           <section style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>Latest debate</h2>
             {d.latest_debate ? <DebateThread debate={d.latest_debate} /> : (

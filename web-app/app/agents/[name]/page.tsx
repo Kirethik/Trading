@@ -11,6 +11,7 @@ import { DiaryTimeline } from "@/components/agents/DiaryTimeline";
 import { LessonCard } from "@/components/agents/LessonCard";
 import { DebateThread } from "@/components/agents/DebateThread";
 import { HealthBanner, WatchLog } from "@/components/agents/WatchViews";
+import { ActionTimeline, Conclusions, ReadingList } from "@/components/agents/NewsViews";
 
 function Section({ title, hint, children }: { title: string; hint: string; children: ReactNode }) {
   return (
@@ -101,7 +102,22 @@ function ProfileInner() {
         </Section>
       ) : null}
 
-      {p.watch_log ? (
+      {p.news ? (
+        <>
+          <Section title="What I did about it" hint="Every action I took because of the news — with my reasoning, the safety check's answer, and the articles behind it.">
+            <ActionTimeline items={p.news.actions} />
+          </Section>
+          <Section title="What I concluded" hint="My latest reading for each stock, from very worried to very upbeat, and what it was based on.">
+            <Conclusions items={p.news.conclusions} />
+          </Section>
+          <Section title="What I'm reading" hint="The newest articles, filings and market-mood readings I collected.">
+            <ReadingList items={p.news.reading} />
+          </Section>
+          <Section title="My diary" hint="Everything I did, newest first, in plain words.">
+            <DiaryTimeline items={p.diary} color={p.color} />
+          </Section>
+        </>
+      ) : p.watch_log ? (
         <Section title="My diary" hint="Everything I did, newest first, in plain words.">
           <DiaryTimeline items={p.diary} color={p.color} />
         </Section>

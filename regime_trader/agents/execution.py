@@ -41,7 +41,8 @@ class PaperExecutor:
                  get_bars: Callable[[str], pd.DataFrame | None], ledger_path: str | Path,
                  max_sleeve_pct: float, max_orders_per_day: int,
                  on_event: Callable[[dict], None] | None = None,
-                 main_lock: str | Path | None = None):
+                 main_lock: str | Path | None = None,
+                 buy_block: Callable[[], set[str]] | None = None):
         self.agent = agent
         self.broker = broker
         self.risk = risk
@@ -51,6 +52,7 @@ class PaperExecutor:
         self.max_orders_per_day = int(max_orders_per_day)
         self.on_event = on_event or (lambda e: None)
         self.main_lock = main_lock   # the main system's hard lock: honored, never written
+        self.buy_block = buy_block   # symbols with an active news caution
         cfg = get_config()
         self.allowed_symbols = frozenset(cfg.universe.sectors.as_dict())
         self.threshold = float(cfg.allocation.rebalance_threshold)
@@ -101,6 +103,8 @@ class PaperExecutor:
             return self._emit(base, "blocked", "agent buying paused by the Watchman")
         if side == "buy" and self.main_lock is not None and Path(self.main_lock).exists():
             return self._emit(base, "blocked", "the main system's emergency stop is on")
+        if side == "buy" and self.buy_block is not None and symbol in _safe_block(self.buy_block):
+            return self._emit(base, "blocked", f"there is an active news caution on {symbol}")
         problem = self._validate(symbol, side, target_weight)
         if problem:
             return self._emit(base, "invalid", problem)
@@ -226,6 +230,29 @@ class PaperExecutor:
                 **{k: event[k] for k in ("qty", "price", "stop", "final_weight") if k in event}}
 
 
+def _safe_block(fn: Callable[[], set[str]]) -> set[str]:
+    try:
+        return set(fn())
+    except Exception as exc:   # can't read cautions -> fail closed for buys
+        log.warning("news caution lookup failed (%s); blocking agent buys", exc)
+        return _ALL
+
+
+class _AllSymbols(set):
+    def __contains__(self, item: object) -> bool:
+        return True
+
+
+_ALL = _AllSymbols()
+
+
+def _news_cautions() -> set[str]:
+    from ..news.store import NewsStore
+    hours = float(get_config().agents.get("reporter").get("caution_hours", 24)) \
+        if get_config().agents.get("reporter") is not None else 24.0
+    return set(NewsStore.from_config().open_cautions(utc_now(), hours))
+
+
 def _after_fill(led: dict, intent: OrderIntent, qty: float) -> dict:
     """New ledger after a submitted order (never mutates the input)."""
     s, px = intent.symbol, intent.price
@@ -300,7 +327,7 @@ def executor_from_config(agent: str, broker, on_event: Callable[[dict], None] | 
     sleeve_lock = cfg.resolve_path(ex.get("lock_file") or "state/agent_sleeve.lock")
     return PaperExecutor(
         agent=agent, broker=broker, risk=RiskManager(lock_file=sleeve_lock),
-        main_lock=cfg.resolve_path(cfg.risk.lock_file),
+        main_lock=cfg.resolve_path(cfg.risk.lock_file), buy_block=_news_cautions,
         get_bars=lambda s: provider.get_bars(s, timeframe=cfg.data.timeframe, refresh=True),
         ledger_path=cfg.resolve_path(ex.ledger_file),
         max_sleeve_pct=ex.max_sleeve_pct, max_orders_per_day=ex.max_orders_per_day,

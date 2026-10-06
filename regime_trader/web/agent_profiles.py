@@ -121,6 +121,14 @@ def humanize(row: dict) -> dict:
         return {"when": when, "tone": "neutral",
                 "headline": f"Suggested {len(out['candidates'])} new settings to try for {subject}",
                 "detail": str(out.get("rationale", ""))}
+    if "sentiment" in out:
+        try:
+            words, tone = _mood(float(out.get("sentiment", 0)))
+        except (TypeError, ValueError):
+            words, tone = "unclear", "neutral"
+        return {"when": when, "tone": tone,
+                "headline": f"Read the news on {subject}: {words} ({out.get('confidence', '?')} confidence)",
+                "detail": str(out.get("why", ""))}
     if "headline" in out:
         return {"when": when, "tone": "neutral", "headline": f"Explained a problem: {out['headline']}",
                 "detail": str(out.get("explanation", ""))}
@@ -184,6 +192,72 @@ def watch_status() -> dict:
             "pause_reason": pause.get("reason") if paused_until else None}
 
 
+# ---------------------------------------------------------------- reporter
+_MOOD = [(-1.5, "very worried", "bad"), (-0.5, "worried", "bad"), (0.5, "neutral", "neutral"),
+         (1.5, "upbeat", "good"), (99, "very upbeat", "good")]
+_ACTION_WORDS = {"buy": "Bought (small, practice money)", "exit": "Sold (closing a news position)",
+                 "caution": "Raised a caution", "considered": "Considered, but did not buy"}
+
+
+def _safe_url(url: str) -> str:
+    return url if str(url).lower().startswith(("https://", "http://")) else ""
+
+
+def _news_store():
+    from ..news.store import NewsStore
+    cfg = data._cfg()
+    news = cfg.get("news")
+    rel = news.get("db") if news is not None else None
+    path = cfg.resolve_path(rel) if rel else cfg.resolve_path(cfg.state_dir) / "news.db"
+    return NewsStore(path) if path.exists() else None
+
+
+def _card(a: dict) -> dict:
+    return {"id": a["id"], "source": a["source"], "publisher": a["publisher"], "headline": a["headline"],
+            "summary": a["summary"][:300], "url": _safe_url(a["url"]),
+            "when": a["published_at"] or a["seen_at"], "symbols": a["symbols"]}
+
+
+def _mood(sentiment: float) -> tuple[str, str]:
+    return next((w, t) for limit, w, t in _MOOD if sentiment <= limit)
+
+
+def news_feed(limit: int = 30, symbol: str | None = None) -> dict:
+    """What the Reporter read, concluded and did — every action with its
+    reasoning and the articles behind it."""
+    store = _news_store()
+    if store is None:
+        return {"reading": [], "conclusions": [], "actions": []}
+    by_id = {}
+
+    def articles(ids: list[str]) -> list[dict]:
+        missing = [i for i in ids if i not in by_id]
+        if missing:
+            for a in store.articles(limit=500):
+                by_id.setdefault(a["id"], _card(a))
+        return [by_id[i] for i in ids if i in by_id]
+
+    reading = [_card(a) for a in store.articles(symbol=symbol, limit=limit)]
+    latest: dict[str, dict] = {}
+    for a in store.assessments(limit=200, symbol=symbol):
+        latest.setdefault(a["symbol"], a)
+    conclusions = []
+    for sym, a in sorted(latest.items(), key=lambda kv: kv[1]["as_of"], reverse=True)[:12]:
+        words, tone = _mood(float(a["sentiment"]))
+        conclusions.append({"symbol": sym, "when": a["as_of"], "sentiment": a["sentiment"], "mood": words,
+                            "tone": tone, "confidence": a["confidence"], "why": a["why"],
+                            "supporting": articles(a["article_ids"])})
+    actions = []
+    for act in store.actions(limit=limit, symbol=symbol):
+        tone = {"buy": "good", "exit": "neutral", "caution": "bad"}.get(act["kind"], "neutral")
+        actions.append({"when": act["ts"], "symbol": act["symbol"], "kind": act["kind"],
+                        "headline": f"{_ACTION_WORDS.get(act['kind'], act['kind'])}: {act['symbol']}",
+                        "reason": act["reason"], "result": act["result"], "tone": tone,
+                        "risk_check": (act["details"].get("order") or {}).get("reason"),
+                        "supporting": articles(act["details"].get("articles") or [])})
+    return {"reading": reading, "conclusions": conclusions, "actions": actions}
+
+
 # ------------------------------------------------------------------- stats
 def _stats(rows: list[dict], name: str, kill_switch: bool) -> dict:
     now = datetime.now(timezone.utc)
@@ -238,7 +312,9 @@ def team() -> dict:
         last = next((humanize(r) for r in reversed(rows) if r.get("agent") == spec.name), None)
         agents.append({**_persona(spec), "stats": _stats(rows, spec.name, activity["kill_switch"]),
                        "latest": last})
-    return {"as_of": activity["as_of"], "agents": agents, "watch": watch_status(),
+    feed = news_feed(limit=5)
+    news_strip = [a for a in feed["actions"] if a["kind"] != "considered"][:3] or feed["actions"][:3]
+    return {"as_of": activity["as_of"], "agents": agents, "watch": watch_status(), "news": news_strip,
             "latest_debate": _debate(debates[-1]) if debates else None,
             "team": {k: activity[k] for k in ("budget", "supervisor", "kill_switch", "sleeve")}}
 
@@ -251,6 +327,8 @@ def profile(name: str) -> dict | None:
     kill = data.load_agent_activity(limit=1)["kill_switch"]
     diary = [humanize(r) for r in reversed(rows) if r.get("agent") == name][:100]
     extra = {"watch": watch_status(), "watch_log": _watch_log()} if name == "watchman" else {}
+    if name == "reporter":
+        extra = {"news": news_feed()}
     return {**_persona(spec), **extra, "stats": _stats(rows, name, kill), "looked_at": _looked_at(rows, name),
             "diary": diary, "lessons": _lessons(name),
             "debates": [_debate(p) for p in reversed(_posts("debate", 20)) if _took_part(name, p)]}
@@ -262,4 +340,4 @@ def _took_part(name: str, post: dict) -> bool:
         return bool(post.get("advocate"))
     if name == "validation":
         return bool(post.get("skeptic"))
-    return name == "governance"   # the Watchman never debates
+    return name == "governance"   # the Watchman and Reporter never debate
