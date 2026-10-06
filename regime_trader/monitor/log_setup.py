@@ -11,7 +11,7 @@ from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
 _CONFIGURED = False
-CHANNELS = ("main", "trades", "alerts", "regime")
+CHANNELS = ("main", "trades", "alerts", "regime", "governance", "agents")
 
 
 class ContextFormatter(logging.Formatter):

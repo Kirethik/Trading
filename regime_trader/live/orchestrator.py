@@ -29,6 +29,7 @@ from ..strategy.catalog import all_required_symbols
 from ..strategy.regime_strategy import RegimeStrategy
 from ..strategy.base import StrategyContext
 from ..utils import atomic_write_json, new_id, utc_now, utc_now_iso
+from . import execution
 from .state import SessionState
 
 log = get_logger("main")
@@ -201,11 +202,8 @@ class Orchestrator:
                 continue
             stop = None
             if target > current:
-                df = bars.get(s)
-                if df is not None and len(df) > self.cfg.risk.atr_window + 2:
-                    a = F.atr(df, self.cfg.risk.atr_window).iloc[-1]
-                    if np.isfinite(a):
-                        stop = self.risk.protective_stop(px, float(a))
+                stop = execution.protective_stop_for(self.risk, bars.get(s), px,
+                                                     self.cfg.risk.atr_window)
             intents.append(OrderIntent(
                 signal_id=new_id(), symbol=s, side="buy" if target > current else "sell",
                 target_weight=target, current_weight=current, price=px, stop_price=stop,
@@ -221,36 +219,38 @@ class Orchestrator:
             return None
         if self.state.already_submitted(d.intent.signal_id):
             return None  # restart idempotency: never double-enter
-        delta = d.final_weight - d.intent.current_weight
-        notional = abs(delta) * p.equity
+        if not execution.is_actionable(d, self.cfg.allocation.rebalance_threshold):
+            return None
         px = d.intent.price
-        qty = notional / px
+        s = d.intent.symbol
+        broker_qty = execution.broker_qty(d, p)
+
         action = {
-            "signal_id": d.intent.signal_id, "symbol": d.intent.symbol,
-            "side": d.intent.side, "qty": round(qty, 6), "ref_price": px,
+            "signal_id": d.intent.signal_id, "symbol": s,
+            "side": d.intent.side, "qty": round(broker_qty, 6), "ref_price": px,
             "stop": d.intent.stop_price, "reasons": d.reasons, "dry_run": self.dry_run,
         }
+        if broker_qty <= 0:
+            action["skipped"] = "sized below one tradable unit"
+            log.info("order skipped: sub-unit size", extra={"ctx": action})
+            return action
+
         if self.dry_run:
             log.info("DRY-RUN order (not sent)", extra={"ctx": action})
         else:
             try:
-                if d.intent.side == "buy" and delta > 0:
-                    offset = self.cfg.broker.limit_offset_bps / 10_000.0
-                    self.broker.submit_entry(
-                        d.intent.symbol, qty, px * (1 + offset), d.intent.stop_price,
-                        signal_id=d.intent.signal_id,
-                    )
-                elif d.intent.side == "sell" and delta < 0:
-                    pos = p.positions.get(d.intent.symbol)
-                    if pos:
-                        self.broker.submit_exit(d.intent.symbol, min(qty, pos.qty),
-                                                signal_id=d.intent.signal_id)
+                order, broker_qty = execution.submit(self.broker, d, broker_qty,
+                                                     self.cfg.broker.limit_offset_bps)
+                if order is None and d.intent.side == "buy":  # broker declined (e.g. sub-1-share)
+                    action["skipped"] = "broker returned no order"
+                    return action
                 self.state.mark_submitted(d.intent.signal_id)
             except Exception as exc:
-                self.alerts.send(AlertKind.API_LOSS, f"order failed for {d.intent.symbol}: {exc}")
+                self.alerts.send(AlertKind.API_LOSS, f"order failed for {s}: {exc}")
                 action["error"] = str(exc)
-        # track locally (paper fills assumed near ref price; reconciled at boot)
-        self._apply_local(d, p, qty)
+                return action
+        # track locally the SAME quantity the broker transacted
+        self._apply_local(d, p, broker_qty)
         return action
 
     def _apply_local(self, d, p, qty: float) -> None:

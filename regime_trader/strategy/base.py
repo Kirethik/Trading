@@ -38,6 +38,9 @@ class StrategyContext:
 
 class Strategy(ABC):
     name: str = "base"
+    sizing_mode: str = "risk"           # "risk" | "vol_target"
+    target_vol: float = 0.0             # annualised vol target (0 = inactive)
+    stop_atr_mult: float | None = None  # None = use RiskManager global default
 
     @abstractmethod
     def compute_weights(self, ctx: StrategyContext) -> dict[str, float]:

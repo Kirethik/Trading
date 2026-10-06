@@ -23,6 +23,7 @@ class AlertKind(str, Enum):
     FLICKER = "flicker"
     ORDER_REJECTED = "order_rejected"
     SYSTEM = "system"
+    AGENT = "agent"
 
 
 class AlertManager:

@@ -1,0 +1,26 @@
+[Unit]
+Description=Regime-Trader Gemini agent supervisor (always-on agents)
+After=network.target regime-dashboard.service
+
+[Service]
+Type=simple
+User=ec2-user
+Group=ec2-user
+WorkingDirectory=/home/ec2-user/regime-trader
+EnvironmentFile=-/home/ec2-user/regime-trader/.env
+# PAPER ONLY: the supervisor refuses to start unless ALPACA_PAPER is true and
+# GOOGLE_API_KEY is set. Agents may place paper orders autonomously; every
+# order still clears the RiskManager veto + breaker.lock. Trading does not
+# depend on this process. Pause all agents: touch state/agents.disabled
+ExecStart=/home/ec2-user/regime-trader/venv/bin/python -m regime_trader agents-supervisor
+Restart=on-failure
+RestartSec=30
+KillSignal=SIGTERM
+TimeoutStopSec=30
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=read-only
+ReadWritePaths=/home/ec2-user/regime-trader/state /home/ec2-user/regime-trader/logs /home/ec2-user/regime-trader/data_cache
+
+[Install]
+WantedBy=multi-user.target

@@ -74,6 +74,12 @@ class Config(ConfigSection):
     def firecrawl_api_key(self) -> str | None:
         return os.environ.get("FIRECRAWL_API_KEY")
 
+    @property
+    def google_api_key(self) -> str | None:
+        """Gemini (AI Studio) key for the agent runtime; optional — agents
+        degrade to deterministic fallbacks without it."""
+        return os.environ.get("GOOGLE_API_KEY") or None
+
     def resolve_path(self, rel: str) -> Path:
         p = Path(rel)
         return p if p.is_absolute() else PROJECT_ROOT / p

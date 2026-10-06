@@ -68,7 +68,10 @@ risk:
   correlation_limit: 0.90          # above this vs existing book: reject
   correlation_scale_start: 0.75    # between start and limit: scale down linearly
   risk_per_trade: 0.01             # max equity fraction lost if the stop is hit
-  stop_atr_mult: 2.5
+  stop_atr_mult: 2.5               # default for all strategies; trend uses 6.0 via strategy attr
+  trend_stop_atr_mult: 6.0         # wide trailing stop — lets winners run (Wilcox: <7% of trades = all profit)
+  trend_target_vol: 0.15           # vol-target sizing for trend/ai-enhanced (15% annualised)
+  trend_band: 0.01                 # SMA band hysteresis (1%) to dampen whipsaws (Faber monthly analog)
   atr_window: 14
   overnight_gap_risk: 0.03         # assumed adverse overnight gap, widens sizing stop
   breakers:
@@ -88,6 +91,7 @@ backtest:
   initial_capital: 100000
   commission: 0.0                  # explicit commission-free assumption
   random_benchmark_seeds: 20
+  periods_per_year: 252            # annualization basis (equities); research harness overrides per timeframe
 
 ensemble:
   min_sharpe_to_vote: 0.3          # challengers below this never enter the ensemble
@@ -110,6 +114,23 @@ omnivore:
   crypto_universe: ["BTC/USD", "ETH/USD", "LTC/USD", "DOGE/USD", "AVAX/USD", "LINK/USD"]
   ledger_file: state/omnivore_ledger.json
 
+research:                          # ETH/USD systematic research harness (research-eth)
+  symbol: "ETH/USD"
+  timeframes:                      # label -> annualization basis (24/7 crypto)
+    "1Day": 365
+    "4Hour": 2190                  # 365 * 6 four-hour bars per day
+  base_slippage_bps: 8             # realistic ETH taker slippage on a market-ish fill
+  slippage_sweep_bps: [5, 10, 25, 50]
+  commission_bps: 10               # ~10 bps/side taker fee (typical retail crypto)
+  spread_bps: 2                    # half-spread cost assumption
+  initial_capital: 100000
+  shortlist_n: 10                  # candidates promoted from broad sweep to full validation
+  out_dir: research/eth
+  # research-only long/short study (production stays long-only spot)
+  longshort:
+    enabled: true
+    funding_file: data_cache/ETH-USD_funding.csv
+
 monitoring:
   log_dir: logs
   alert_rate_limit_seconds: 300
@@ -123,3 +144,167 @@ advisory:                          # web-sourced signals: shrink-only, never ove
 
 state_dir: state
 runs_dir: runs
+
+# ============================================================
+# Governance layer (§ daily governed research loop).
+# Opus 4.8 = final authority; Sonnet teams optimize/validate.
+# Rules-first: thresholds below are the coded HARD gates; the
+# intelligent agents only arbitrate borderline/conflict cases.
+# ============================================================
+governance:
+  # held-out "production" window — never tuned on (out-of-sample test)
+  oos_train: ["2023-01-01", "2025-01-01"]
+  oos_test: ["2025-01-01", "2026-01-01"]
+  max_oos_degradation: 0.50        # OOS Sharpe may fall at most this fraction of train
+  min_oos_sharpe: 0.0              # OOS Sharpe must clear this floor
+
+  monte_carlo:
+    n_sims: 10000
+    methods: [trade, return, bootstrap]
+    block: 5                       # block-bootstrap block length (bars)
+    ruin_drawdown: -0.50           # equity path touching this = "ruin"
+    max_ruin_prob: 0.05            # reject if P(ruin) exceeds this
+    seed: 42
+
+  # slippage robustness sweep (basis points per side): low / med / high / extreme
+  slippage_sweep_bps: [1, 5, 15, 50]
+  slippage_min_sharpe: 0.0         # must stay viable at the HIGH tier
+
+  # full transaction-cost model (basis points unless noted)
+  costs:
+    broker_fee_per_share: 0.0      # Alpaca equities are commission-free
+    exchange_fee_bps: 0.3
+    spread_bps: 2.0
+    borrow_fee_bps: 0.0            # long-only: no borrow
+    regulatory_bps: 0.02           # SEC/TAF approx on sells
+
+  parameter_sensitivity:
+    neighbors: 2                   # test +/- N neighbor values per param
+    step: 0.1                      # fractional perturbation per neighbor
+    max_degradation: 0.40          # mean neighbor Sharpe may fall at most this vs center
+
+  # coded acceptance gates (the deterministic veto on strategies)
+  thresholds:
+    min_sharpe: 0.8                  # "good strategy" bar — only Sharpe>=0.8 gets paper capital
+    min_calmar: 0.3
+    min_profit_factor: 1.1
+    max_drawdown: -0.30            # backtest max DD worse than this -> reject
+    min_oos_sharpe: 0.0
+    margin_band: 0.15              # within this fraction of any gate -> borderline -> escalate
+
+  # real historical event windows (the named events are EXAMPLES; extend freely).
+  # markets: which asset classes the slice applies to; data coverage permitting.
+  stress_events:
+    - {name: covid-2020, start: "2020-02-15", end: "2020-04-30", markets: [equities]}
+    - {name: 2018-q4-selloff, start: "2018-10-01", end: "2018-12-31", markets: [equities]}
+    - {name: banking-crisis-2023, start: "2023-03-01", end: "2023-03-31", markets: [equities]}
+    - {name: rate-shock-2022, start: "2022-01-01", end: "2022-10-15", markets: [equities]}
+  stress_min_survival_dd: -0.50    # event-window max DD must stay above this
+
+  tiering:
+    deep_validation_weekday: SAT   # weekly heavy suite fires on this weekday
+
+  # capital governance over the paper account (drives the omnivore ledger)
+  allocation:
+    total_capital: 100000
+    max_per_strategy: 8000
+    min_per_strategy: 1000
+    top_n: 20                      # at most N strategies deployed concurrently
+    reduce_factor: 0.5             # "reduce risk" decision halves a strategy's capital
+
+  # live-drift detection on already-deployed strategies
+  drift:
+    min_live_observations: 15
+    degrade_sharpe: 0.0            # live slice Sharpe below this -> reduce/retire review
+    retire_consecutive_fails: 3    # fail validation this many cycles running -> retire
+
+  # intelligent escalation via the Gemini agent runtime (top-level `agents:`)
+  agents:
+    escalation_enabled: true
+
+  # daily LLM-driven improvement loop: the LLM proposes concrete parameter
+  # sets for the focus cohort every day; every candidate is backtested and the
+  # winner still goes through Validation + Governance like any other proposal.
+  improver:
+    enabled: true
+    focus_symbols: ["ETH/USD"]     # current optimization focus (ETH, USD-quoted on Alpaca)
+    max_candidates: 3              # parameter sets the LLM may propose per strategy
+    min_improvement: 0.10          # Sharpe lift required before a proposal is filed
+
+  registry_file: state/governance_registry.json
+  decisions_file: state/governance_decisions.json
+
+# ============================================================
+# Agent runtime (Google Gemini via ADK). PAPER ONLY, permanently:
+# the runtime refuses to start unless ALPACA_PAPER is true. Agents may
+# place paper orders autonomously, but every order passes RiskManager.
+# GOOGLE_API_KEY lives in .env (use a billing-enabled key: free-tier
+# prompts may be used by Google for training / human review).
+# ============================================================
+agents:
+  enabled: true
+  models:                          # pinned IDs — never *-latest aliases
+    pro: gemini-3.1-pro-preview    # governance / judgment calls
+    flash: gemini-3.8-flash        # workers / advisory
+  temperature: 0.2
+  timeout_seconds: 120
+  daily_budget_usd: 2.0            # hard cap; exceeded -> agents return None (deterministic fallback)
+  pricing:                         # USD per 1M tokens (input, output)
+    gemini-3.1-pro-preview: {input: 2.00, output: 12.00}
+    gemini-3.8-flash: {input: 0.75, output: 3.75}
+  failure_alert_streak: 3          # consecutive agent failures before an AGENT alert
+  max_llm_calls_per_run: 8         # caps tool loops inside one agent call
+  rubric_dir: .claude/skills       # <rubric_dir>/<skill>/SKILL.md
+  audit_file: state/agent_audit.jsonl
+  audit_max_bytes: 20000000
+  budget_file: state/agent_budget.json
+  blackboard_db: state/agents.db
+  kill_switch_file: state/agents.disabled
+  execution:
+    max_sleeve_pct: 0.25           # agent sleeve: max share of paper equity agents may hold
+    max_orders_per_day: 20
+    ledger_file: state/agent_ledger.json
+  supervisor:
+    heartbeat_seconds: 30
+    heartbeat_file: state/agent_supervisor.json
+
+# ============================================================
+# Web dashboard (FastAPI on EC2 :80). Read-only views + graphs +
+# SAFE controls only (never places orders). Password lives in .env.
+# ============================================================
+web:
+  enabled: true
+  host: 0.0.0.0
+  port: 8000   # nginx listens on 80 and proxies to this port
+  title: "Regime-Trader"
+  password_env: DASHBOARD_PASSWORD     # value in .env, never in the repo
+  session_secret_env: DASHBOARD_SECRET # value in .env (random); cookie signing
+  session_hours: 12                    # login cookie lifetime
+  job_log_dir: logs/jobs               # per-job subprocess logs
+
+webapp:
+  # Next.js UI origin(s) allowed by the CORS middleware on the FastAPI app.
+  # Add the EC2 public IP / domain when deploying behind nginx.
+  cors_origins:
+    - "http://localhost:3000"
+    - "http://localhost:3001"
+    - "http://13.211.89.125"
+  # Interactive assets exposed in the UI asset selector
+  assets:
+    crypto:  ["ETH/USD", "BTC/USD", "SOL/USD", "ADA/USD"]
+    stocks:  ["AAPL", "MSFT", "NVDA", "TSLA"]
+    etfs:    ["SPY", "QQQ", "VTI"]
+
+# ============================================================
+# Notion report mirror. Auto-sync runs nightly on EC2 (needs token);
+# on-demand sync also available. No-op if NOTION_API_KEY is unset.
+# ============================================================
+notion:
+  enabled: true
+  token_env: NOTION_API_KEY            # internal-integration token, in .env
+  api_version: "2022-06-28"
+  parent_page_id: "37db5fee63c781449286f9263e419a4c"  # "Trading" hub page
+  databases:
+    runs: "7df0221d1b484cb2b7dd002140a14959"        # Governance Runs database id
+    strategies: "8d561d1f1a0446b2abe7170801d40d49"  # Strategies database id
+    decisions: "04395139a8c24ff39012b6d29927da12"   # Decisions Log database id

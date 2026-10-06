@@ -8,10 +8,14 @@ state/
 data_cache/
 runs/
 __pycache__/
+.venv/
 *.pyc
 .pytest_cache/
 .ecc_catalog_tmp.json
 .ecc_skills_desc.txt
+
+# EC2 deployment (credentials + infrastructure)
+ec2/
 
 # Windows junk files
 bin
@@ -22,3 +26,4 @@ node_modules
 npm
 rmdir
 where
+.coverage

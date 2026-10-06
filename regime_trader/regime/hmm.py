@@ -165,8 +165,12 @@ class RegimeModel:
         m = self.model
         T, K = Z.shape[0], self.n_states
         logB = np.empty((T, K))
+        # hmmlearn 0.3.x exposes covars_ already expanded to (K, n_feat, n_feat)
+        # for full/diag/tied, so the full matrix is used directly for every
+        # covariance_type — np.diag() would have silently dropped the
+        # off-diagonal terms of a 'tied' covariance.
         for k in range(K):
-            cov = m.covars_[k] if self.cov_type == "full" else np.diag(m.covars_[k])
+            cov = m.covars_[k]
             logB[:, k] = multivariate_normal.logpdf(Z, mean=m.means_[k], cov=cov, allow_singular=True)
         return logB
 

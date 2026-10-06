@@ -1,0 +1,2192 @@
+{
+  "selection_window": [
+    "2017-08-17",
+    "2024-12-31"
+  ],
+  "holdout_window": [
+    "2025-01-01",
+    "2026-06-16"
+  ],
+  "thresholds": {
+    "min_sharpe": 0.8,
+    "min_calmar": 0.3,
+    "min_profit_factor": 1.1,
+    "max_drawdown": -0.35,
+    "max_oos_degradation": 0.5,
+    "min_oos_sharpe": 0.3,
+    "max_ruin_prob": 0.05,
+    "min_plateau_ratio": 0.6
+  },
+  "n_candidates": 38,
+  "shortlist": [
+    "rg-sma200-g55-1d",
+    "rg-sma150-1d",
+    "rg-ensemble-1d",
+    "rg-sma200-1d",
+    "rg-ensemble-vt60-1d",
+    "rg-sma200-g75-1d",
+    "rg-sma100-1d",
+    "ensemble-vt40-1d",
+    "sma200-1d",
+    "ensemble-1d"
+  ],
+  "n_passed_validation": 4,
+  "decision": {
+    "verdict": "SELECTED",
+    "cid": "rg-sma150-1d",
+    "selection_sharpe": 1.214678,
+    "holdout_sharpe": 0.828761,
+    "plateau_ratio": 0.91
+  },
+  "leaderboard_top": [
+    {
+      "cid": "rg-sma200-g55-1d",
+      "family": "regime-trend",
+      "timeframe": "1Day",
+      "sel_sharpe": 1.222537,
+      "sel_calmar": 1.08857,
+      "sel_cagr": 0.043583,
+      "sel_maxdd": -0.040037,
+      "sel_profit_factor": 2.195345,
+      "sel_recovery": 6.268975,
+      "n_round_trips": 98,
+      "avg_exposure": 0.074119
+    },
+    {
+      "cid": "rg-sma150-1d",
+      "family": "regime-trend",
+      "timeframe": "1Day",
+      "sel_sharpe": 1.214678,
+      "sel_calmar": 1.204233,
+      "sel_cagr": 0.045436,
+      "sel_maxdd": -0.03773,
+      "sel_profit_factor": 2.53547,
+      "sel_recovery": 6.962443,
+      "n_round_trips": 81,
+      "avg_exposure": 0.07456
+    },
+    {
+      "cid": "rg-ensemble-1d",
+      "family": "regime-ensemble",
+      "timeframe": "1Day",
+      "sel_sharpe": 1.189993,
+      "sel_calmar": 0.709293,
+      "sel_cagr": 0.050761,
+      "sel_maxdd": -0.071566,
+      "sel_profit_factor": 1.995299,
+      "sel_recovery": 4.147573,
+      "n_round_trips": 129,
+      "avg_exposure": 0.070816
+    },
+    {
+      "cid": "rg-sma200-1d",
+      "family": "regime-trend",
+      "timeframe": "1Day",
+      "sel_sharpe": 1.189599,
+      "sel_calmar": 1.110667,
+      "sel_cagr": 0.044468,
+      "sel_maxdd": -0.040037,
+      "sel_profit_factor": 2.447984,
+      "sel_recovery": 6.408276,
+      "n_round_trips": 80,
+      "avg_exposure": 0.074937
+    },
+    {
+      "cid": "rg-ensemble-vt60-1d",
+      "family": "regime-ensemble",
+      "timeframe": "1Day",
+      "sel_sharpe": 1.152645,
+      "sel_calmar": 0.689851,
+      "sel_cagr": 0.049489,
+      "sel_maxdd": -0.071739,
+      "sel_profit_factor": 1.937337,
+      "sel_recovery": 4.022996,
+      "n_round_trips": 129,
+      "avg_exposure": 0.072361
+    },
+    {
+      "cid": "rg-sma200-g75-1d",
+      "family": "regime-trend",
+      "timeframe": "1Day",
+      "sel_sharpe": 1.107164,
+      "sel_calmar": 1.131323,
+      "sel_cagr": 0.043556,
+      "sel_maxdd": -0.0385,
+      "sel_profit_factor": 2.408127,
+      "sel_recovery": 6.514807,
+      "n_round_trips": 62,
+      "avg_exposure": 0.071317
+    },
+    {
+      "cid": "rg-sma100-1d",
+      "family": "regime-trend",
+      "timeframe": "1Day",
+      "sel_sharpe": 0.901647,
+      "sel_calmar": 0.565323,
+      "sel_cagr": 0.033352,
+      "sel_maxdd": -0.058997,
+      "sel_profit_factor": 1.853442,
+      "sel_recovery": 3.185587,
+      "n_round_trips": 97,
+      "avg_exposure": 0.074742
+    },
+    {
+      "cid": "ensemble-vt40-1d",
+      "family": "ensemble",
+      "timeframe": "1Day",
+      "sel_sharpe": 0.883376,
+      "sel_calmar": 0.666726,
+      "sel_cagr": 0.041459,
+      "sel_maxdd": -0.062183,
+      "sel_profit_factor": 1.888084,
+      "sel_recovery": 5.001158,
+      "n_round_trips": 128,
+      "avg_exposure": 0.063154
+    },
+    {
+      "cid": "sma200-1d",
+      "family": "sma",
+      "timeframe": "1Day",
+      "sel_sharpe": 0.865046,
+      "sel_calmar": 0.807667,
+      "sel_cagr": 0.035152,
+      "sel_maxdd": -0.043523,
+      "sel_profit_factor": 2.225698,
+      "sel_recovery": 5.950099,
+      "n_round_trips": 66,
+      "avg_exposure": 0.069016
+    },
+    {
+      "cid": "ensemble-1d",
+      "family": "ensemble",
+      "timeframe": "1Day",
+      "sel_sharpe": 0.855297,
+      "sel_calmar": 0.605287,
+      "sel_cagr": 0.040838,
+      "sel_maxdd": -0.067469,
+      "sel_profit_factor": 1.834793,
+      "sel_recovery": 4.532242,
+      "n_round_trips": 122,
+      "avg_exposure": 0.064641
+    },
+    {
+      "cid": "multifac-vt-1d",
+      "family": "multi-factor",
+      "timeframe": "1Day",
+      "sel_sharpe": 0.852066,
+      "sel_calmar": 0.635404,
+      "sel_cagr": 0.041297,
+      "sel_maxdd": -0.064993,
+      "sel_profit_factor": 1.799595,
+      "sel_recovery": 4.764002,
+      "n_round_trips": 123,
+      "avg_exposure": 0.067241
+    },
+    {
+      "cid": "multifac-1d",
+      "family": "multi-factor",
+      "timeframe": "1Day",
+      "sel_sharpe": 0.852066,
+      "sel_calmar": 0.635404,
+      "sel_cagr": 0.041297,
+      "sel_maxdd": -0.064993,
+      "sel_profit_factor": 1.799595,
+      "sel_recovery": 4.764002,
+      "n_round_trips": 123,
+      "avg_exposure": 0.067241
+    },
+    {
+      "cid": "sma50-1d",
+      "family": "sma",
+      "timeframe": "1Day",
+      "sel_sharpe": 0.850541,
+      "sel_calmar": 0.842857,
+      "sel_cagr": 0.0353,
+      "sel_maxdd": -0.041881,
+      "sel_profit_factor": 2.034663,
+      "sel_recovery": 6.211968,
+      "n_round_trips": 102,
+      "avg_exposure": 0.072934
+    },
+    {
+      "cid": "tsmom30-0-1d",
+      "family": "tsmom",
+      "timeframe": "1Day",
+      "sel_sharpe": 0.845993,
+      "sel_calmar": 0.739873,
+      "sel_cagr": 0.035393,
+      "sel_maxdd": -0.047836,
+      "sel_profit_factor": 1.929164,
+      "sel_recovery": 5.454412,
+      "n_round_trips": 122,
+      "avg_exposure": 0.070962
+    },
+    {
+      "cid": "ensemble-vt60-1d",
+      "family": "ensemble",
+      "timeframe": "1Day",
+      "sel_sharpe": 0.839129,
+      "sel_calmar": 0.607661,
+      "sel_cagr": 0.04001,
+      "sel_maxdd": -0.065843,
+      "sel_profit_factor": 1.805705,
+      "sel_recovery": 4.539263,
+      "n_round_trips": 120,
+      "avg_exposure": 0.065108
+    }
+  ],
+  "validations": [
+    {
+      "cid": "rg-sma200-g55-1d",
+      "family": "regime-trend",
+      "timeframe": "1Day",
+      "selection": {
+        "total_return": 0.25099,
+        "cagr": 0.043583,
+        "sharpe": 1.222537,
+        "sortino": 1.318144,
+        "calmar": 1.08857,
+        "max_drawdown": -0.040037,
+        "max_drawdown_duration_bars": 827,
+        "recovery_factor": 6.268975,
+        "ann_vol": 0.035408,
+        "bars": 1917,
+        "win_rate": 0.489796,
+        "profit_factor": 2.195345,
+        "n_round_trips": 98,
+        "avg_trade": 256.112415,
+        "n_fills": 388
+      },
+      "holdout": {
+        "total_return": 0.007032,
+        "cagr": 0.004837,
+        "sharpe": 0.293027,
+        "sortino": 0.168551,
+        "calmar": 0.179199,
+        "max_drawdown": -0.026994,
+        "max_drawdown_duration_bars": 306,
+        "recovery_factor": 0.260492,
+        "ann_vol": 0.016958,
+        "bars": 531,
+        "win_rate": 0.304348,
+        "profit_factor": 1.164409,
+        "n_round_trips": 23,
+        "avg_trade": 38.24646,
+        "n_fills": 64
+      },
+      "oos_degradation": 0.76,
+      "wf_folds": [
+        2.02,
+        2.89,
+        -2.32,
+        0.75,
+        0.55
+      ],
+      "monte_carlo": {
+        "prob_of_ruin": 0.0,
+        "prob_profit": 0.993994,
+        "worst_dd_p1": -0.101108
+      },
+      "worst_cost_sharpe": {
+        "bps": 50,
+        "sharpe": 0.861
+      },
+      "gates": {
+        "sharpe": true,
+        "calmar": true,
+        "profit_factor": true,
+        "max_drawdown": true,
+        "oos_positive": false,
+        "oos_degradation": false,
+        "wf_stable": true,
+        "ruin": true,
+        "slippage_viable": true
+      },
+      "passed": false
+    },
+    {
+      "cid": "rg-sma150-1d",
+      "family": "regime-trend",
+      "timeframe": "1Day",
+      "selection": {
+        "total_return": 0.262692,
+        "cagr": 0.045436,
+        "sharpe": 1.214678,
+        "sortino": 1.272782,
+        "calmar": 1.204233,
+        "max_drawdown": -0.03773,
+        "max_drawdown_duration_bars": 523,
+        "recovery_factor": 6.962443,
+        "ann_vol": 0.03715,
+        "bars": 1917,
+        "win_rate": 0.469136,
+        "profit_factor": 2.53547,
+        "n_round_trips": 81,
+        "avg_trade": 324.311521,
+        "n_fills": 331
+      },
+      "holdout": {
+        "total_return": 0.024337,
+        "cagr": 0.016697,
+        "sharpe": 0.828761,
+        "sortino": 0.596263,
+        "calmar": 1.157719,
+        "max_drawdown": -0.014423,
+        "max_drawdown_duration_bars": 252,
+        "recovery_factor": 1.687397,
+        "ann_vol": 0.020228,
+        "bars": 531,
+        "win_rate": 0.4,
+        "profit_factor": 1.639492,
+        "n_round_trips": 20,
+        "avg_trade": 153.648567,
+        "n_fills": 67
+      },
+      "oos_degradation": 0.318,
+      "wf_folds": [
+        1.9,
+        2.67,
+        -2.0,
+        1.12,
+        0.42
+      ],
+      "monte_carlo": {
+        "prob_of_ruin": 0.0,
+        "prob_profit": 0.995996,
+        "worst_dd_p1": -0.095882
+      },
+      "worst_cost_sharpe": {
+        "bps": 50,
+        "sharpe": 0.968
+      },
+      "gates": {
+        "sharpe": true,
+        "calmar": true,
+        "profit_factor": true,
+        "max_drawdown": true,
+        "oos_positive": true,
+        "oos_degradation": true,
+        "wf_stable": true,
+        "ruin": true,
+        "slippage_viable": true
+      },
+      "passed": true
+    },
+    {
+      "cid": "rg-ensemble-1d",
+      "family": "regime-ensemble",
+      "timeframe": "1Day",
+      "selection": {
+        "total_return": 0.296823,
+        "cagr": 0.050761,
+        "sharpe": 1.189993,
+        "sortino": 1.514841,
+        "calmar": 0.709293,
+        "max_drawdown": -0.071566,
+        "max_drawdown_duration_bars": 827,
+        "recovery_factor": 4.147573,
+        "ann_vol": 0.042365,
+        "bars": 1917,
+        "win_rate": 0.472868,
+        "profit_factor": 1.995299,
+        "n_round_trips": 129,
+        "avg_trade": 230.09549,
+        "n_fills": 510
+      },
+      "holdout": {
+        "total_return": -0.009637,
+        "cagr": -0.006647,
+        "sharpe": -0.196444,
+        "sortino": -0.220072,
+        "calmar": -0.143841,
+        "max_drawdown": -0.046212,
+        "max_drawdown_duration_bars": 252,
+        "recovery_factor": -0.208551,
+        "ann_vol": 0.031442,
+        "bars": 531,
+        "win_rate": 0.348837,
+        "profit_factor": 0.882914,
+        "n_round_trips": 43,
+        "avg_trade": -34.570389,
+        "n_fills": 156
+      },
+      "oos_degradation": 1.165,
+      "wf_folds": [
+        2.16,
+        2.93,
+        -1.75,
+        1.12,
+        0.52
+      ],
+      "monte_carlo": {
+        "prob_of_ruin": 0.0,
+        "prob_profit": 0.984985,
+        "worst_dd_p1": -0.14374
+      },
+      "worst_cost_sharpe": {
+        "bps": 50,
+        "sharpe": 0.715
+      },
+      "gates": {
+        "sharpe": true,
+        "calmar": true,
+        "profit_factor": true,
+        "max_drawdown": true,
+        "oos_positive": false,
+        "oos_degradation": false,
+        "wf_stable": true,
+        "ruin": true,
+        "slippage_viable": true
+      },
+      "passed": false
+    },
+    {
+      "cid": "rg-sma200-1d",
+      "family": "regime-trend",
+      "timeframe": "1Day",
+      "selection": {
+        "total_return": 0.256567,
+        "cagr": 0.044468,
+        "sharpe": 1.189599,
+        "sortino": 1.249836,
+        "calmar": 1.110667,
+        "max_drawdown": -0.040037,
+        "max_drawdown_duration_bars": 756,
+        "recovery_factor": 6.408276,
+        "ann_vol": 0.037154,
+        "bars": 1917,
+        "win_rate": 0.5,
+        "profit_factor": 2.447984,
+        "n_round_trips": 80,
+        "avg_trade": 320.709185,
+        "n_fills": 343
+      },
+      "holdout": {
+        "total_return": 0.021862,
+        "cagr": 0.015005,
+        "sharpe": 0.784778,
+        "sortino": 0.542748,
+        "calmar": 0.967834,
+        "max_drawdown": -0.015504,
+        "max_drawdown_duration_bars": 252,
+        "recovery_factor": 1.410101,
+        "ann_vol": 0.019213,
+        "bars": 531,
+        "win_rate": 0.411765,
+        "profit_factor": 1.588652,
+        "n_round_trips": 17,
+        "avg_trade": 161.594258,
+        "n_fills": 53
+      },
+      "oos_degradation": 0.34,
+      "wf_folds": [
+        1.76,
+        2.89,
+        -2.32,
+        0.95,
+        0.41
+      ],
+      "monte_carlo": {
+        "prob_of_ruin": 0.0,
+        "prob_profit": 0.995495,
+        "worst_dd_p1": -0.096908
+      },
+      "worst_cost_sharpe": {
+        "bps": 50,
+        "sharpe": 0.948
+      },
+      "gates": {
+        "sharpe": true,
+        "calmar": true,
+        "profit_factor": true,
+        "max_drawdown": true,
+        "oos_positive": true,
+        "oos_degradation": true,
+        "wf_stable": true,
+        "ruin": true,
+        "slippage_viable": true
+      },
+      "passed": true
+    },
+    {
+      "cid": "rg-ensemble-vt60-1d",
+      "family": "regime-ensemble",
+      "timeframe": "1Day",
+      "selection": {
+        "total_return": 0.288604,
+        "cagr": 0.049489,
+        "sharpe": 1.152645,
+        "sortino": 1.466524,
+        "calmar": 0.689851,
+        "max_drawdown": -0.071739,
+        "max_drawdown_duration_bars": 828,
+        "recovery_factor": 4.022996,
+        "ann_vol": 0.042699,
+        "bars": 1917,
+        "win_rate": 0.488372,
+        "profit_factor": 1.937337,
+        "n_round_trips": 129,
+        "avg_trade": 223.723971,
+        "n_fills": 523
+      },
+      "holdout": {
+        "total_return": -0.010616,
+        "cagr": -0.007323,
+        "sharpe": -0.215425,
+        "sortino": -0.2379,
+        "calmar": -0.162722,
+        "max_drawdown": -0.045004,
+        "max_drawdown_duration_bars": 252,
+        "recovery_factor": -0.23589,
+        "ann_vol": 0.031782,
+        "bars": 531,
+        "win_rate": 0.348837,
+        "profit_factor": 0.875842,
+        "n_round_trips": 43,
+        "avg_trade": -37.302832,
+        "n_fills": 156
+      },
+      "oos_degradation": 1.187,
+      "wf_folds": [
+        2.07,
+        2.93,
+        -1.66,
+        1.02,
+        0.52
+      ],
+      "monte_carlo": {
+        "prob_of_ruin": 0.0,
+        "prob_profit": 0.976977,
+        "worst_dd_p1": -0.158395
+      },
+      "worst_cost_sharpe": {
+        "bps": 50,
+        "sharpe": 0.678
+      },
+      "gates": {
+        "sharpe": true,
+        "calmar": true,
+        "profit_factor": true,
+        "max_drawdown": true,
+        "oos_positive": false,
+        "oos_degradation": false,
+        "wf_stable": true,
+        "ruin": true,
+        "slippage_viable": true
+      },
+      "passed": false
+    },
+    {
+      "cid": "rg-sma200-g75-1d",
+      "family": "regime-trend",
+      "timeframe": "1Day",
+      "selection": {
+        "total_return": 0.250818,
+        "cagr": 0.043556,
+        "sharpe": 1.107164,
+        "sortino": 1.217833,
+        "calmar": 1.131323,
+        "max_drawdown": -0.0385,
+        "max_drawdown_duration_bars": 521,
+        "recovery_factor": 6.514807,
+        "ann_vol": 0.039202,
+        "bars": 1917,
+        "win_rate": 0.483871,
+        "profit_factor": 2.408127,
+        "n_round_trips": 62,
+        "avg_trade": 404.743403,
+        "n_fills": 402
+      },
+      "holdout": {
+        "total_return": 0.018628,
+        "cagr": 0.012792,
+        "sharpe": 0.576567,
+        "sortino": 0.427382,
+        "calmar": 0.787102,
+        "max_drawdown": -0.016252,
+        "max_drawdown_duration_bars": 252,
+        "recovery_factor": 1.146212,
+        "ann_vol": 0.022483,
+        "bars": 531,
+        "win_rate": 0.473684,
+        "profit_factor": 1.47516,
+        "n_round_trips": 19,
+        "avg_trade": 124.631892,
+        "n_fills": 65
+      },
+      "oos_degradation": 0.479,
+      "wf_folds": [
+        1.76,
+        2.64,
+        -1.88,
+        0.82,
+        0.14
+      ],
+      "monte_carlo": {
+        "prob_of_ruin": 0.0,
+        "prob_profit": 0.995996,
+        "worst_dd_p1": -0.11371
+      },
+      "worst_cost_sharpe": {
+        "bps": 50,
+        "sharpe": 0.883
+      },
+      "gates": {
+        "sharpe": true,
+        "calmar": true,
+        "profit_factor": true,
+        "max_drawdown": true,
+        "oos_positive": true,
+        "oos_degradation": true,
+        "wf_stable": true,
+        "ruin": true,
+        "slippage_viable": true
+      },
+      "passed": true
+    },
+    {
+      "cid": "rg-sma100-1d",
+      "family": "regime-trend",
+      "timeframe": "1Day",
+      "selection": {
+        "total_return": 0.18794,
+        "cagr": 0.033352,
+        "sharpe": 0.901647,
+        "sortino": 0.947838,
+        "calmar": 0.565323,
+        "max_drawdown": -0.058997,
+        "max_drawdown_duration_bars": 838,
+        "recovery_factor": 3.185587,
+        "ann_vol": 0.037153,
+        "bars": 1917,
+        "win_rate": 0.391753,
+        "profit_factor": 1.853442,
+        "n_round_trips": 97,
+        "avg_trade": 193.752309,
+        "n_fills": 358
+      },
+      "holdout": {
+        "total_return": 0.01576,
+        "cagr": 0.010827,
+        "sharpe": 0.534641,
+        "sortino": 0.468329,
+        "calmar": 0.480863,
+        "max_drawdown": -0.022516,
+        "max_drawdown_duration_bars": 252,
+        "recovery_factor": 0.699945,
+        "ann_vol": 0.020536,
+        "bars": 531,
+        "win_rate": 0.304348,
+        "profit_factor": 1.356234,
+        "n_round_trips": 23,
+        "avg_trade": 81.401214,
+        "n_fills": 87
+      },
+      "oos_degradation": 0.407,
+      "wf_folds": [
+        1.72,
+        2.76,
+        -2.45,
+        0.94,
+        -0.33
+      ],
+      "monte_carlo": {
+        "prob_of_ruin": 0.0,
+        "prob_profit": 0.975475,
+        "worst_dd_p1": -0.122753
+      },
+      "worst_cost_sharpe": {
+        "bps": 50,
+        "sharpe": 0.629
+      },
+      "gates": {
+        "sharpe": true,
+        "calmar": true,
+        "profit_factor": true,
+        "max_drawdown": true,
+        "oos_positive": true,
+        "oos_degradation": true,
+        "wf_stable": true,
+        "ruin": true,
+        "slippage_viable": true
+      },
+      "passed": true
+    },
+    {
+      "cid": "ensemble-vt40-1d",
+      "family": "ensemble",
+      "timeframe": "1Day",
+      "selection": {
+        "total_return": 0.310985,
+        "cagr": 0.041459,
+        "sharpe": 0.883376,
+        "sortino": 1.15345,
+        "calmar": 0.666726,
+        "max_drawdown": -0.062183,
+        "max_drawdown_duration_bars": 758,
+        "recovery_factor": 5.001158,
+        "ann_vol": 0.047251,
+        "bars": 2434,
+        "win_rate": 0.375,
+        "profit_factor": 1.888084,
+        "n_round_trips": 128,
+        "avg_trade": 244.382039,
+        "n_fills": 741
+      },
+      "holdout": {
+        "total_return": -0.00585,
+        "cagr": -0.004033,
+        "sharpe": -0.079851,
+        "sortino": -0.109257,
+        "calmar": -0.073369,
+        "max_drawdown": -0.054966,
+        "max_drawdown_duration_bars": 297,
+        "recovery_factor": -0.106439,
+        "ann_vol": 0.040411,
+        "bars": 531,
+        "win_rate": 0.3,
+        "profit_factor": 0.904431,
+        "n_round_trips": 30,
+        "avg_trade": -35.296752,
+        "n_fills": 152
+      },
+      "oos_degradation": 1.09,
+      "wf_folds": [
+        0.18,
+        2.0,
+        0.84,
+        0.28,
+        0.94
+      ],
+      "monte_carlo": {
+        "prob_of_ruin": 0.0,
+        "prob_profit": 0.977978,
+        "worst_dd_p1": -0.176874
+      },
+      "worst_cost_sharpe": {
+        "bps": 50,
+        "sharpe": 0.589
+      },
+      "gates": {
+        "sharpe": true,
+        "calmar": true,
+        "profit_factor": true,
+        "max_drawdown": true,
+        "oos_positive": false,
+        "oos_degradation": false,
+        "wf_stable": true,
+        "ruin": true,
+        "slippage_viable": true
+      },
+      "passed": false
+    },
+    {
+      "cid": "sma200-1d",
+      "family": "sma",
+      "timeframe": "1Day",
+      "selection": {
+        "total_return": 0.258964,
+        "cagr": 0.035152,
+        "sharpe": 0.865046,
+        "sortino": 0.904641,
+        "calmar": 0.807667,
+        "max_drawdown": -0.043523,
+        "max_drawdown_duration_bars": 521,
+        "recovery_factor": 5.950099,
+        "ann_vol": 0.040907,
+        "bars": 2434,
+        "win_rate": 0.378788,
+        "profit_factor": 2.225698,
+        "n_round_trips": 66,
+        "avg_trade": 395.023649,
+        "n_fills": 479
+      },
+      "holdout": {
+        "total_return": 0.009593,
+        "cagr": 0.006597,
+        "sharpe": 0.259729,
+        "sortino": 0.223331,
+        "calmar": 0.245651,
+        "max_drawdown": -0.026855,
+        "max_drawdown_duration_bars": 297,
+        "recovery_factor": 0.357231,
+        "ann_vol": 0.026684,
+        "bars": 531,
+        "win_rate": 0.307692,
+        "profit_factor": 1.2805,
+        "n_round_trips": 13,
+        "avg_trade": 83.296965,
+        "n_fills": 62
+      },
+      "oos_degradation": 0.7,
+      "wf_folds": [
+        0.33,
+        1.64,
+        0.95,
+        0.44,
+        0.73
+      ],
+      "monte_carlo": {
+        "prob_of_ruin": 0.0,
+        "prob_profit": 0.985485,
+        "worst_dd_p1": -0.137325
+      },
+      "worst_cost_sharpe": {
+        "bps": 50,
+        "sharpe": 0.684
+      },
+      "gates": {
+        "sharpe": true,
+        "calmar": true,
+        "profit_factor": true,
+        "max_drawdown": true,
+        "oos_positive": false,
+        "oos_degradation": false,
+        "wf_stable": true,
+        "ruin": true,
+        "slippage_viable": true
+      },
+      "passed": false
+    },
+    {
+      "cid": "ensemble-1d",
+      "family": "ensemble",
+      "timeframe": "1Day",
+      "selection": {
+        "total_return": 0.305785,
+        "cagr": 0.040838,
+        "sharpe": 0.855297,
+        "sortino": 1.141434,
+        "calmar": 0.605287,
+        "max_drawdown": -0.067469,
+        "max_drawdown_duration_bars": 827,
+        "recovery_factor": 4.532242,
+        "ann_vol": 0.048155,
+        "bars": 2434,
+        "win_rate": 0.368852,
+        "profit_factor": 1.834793,
+        "n_round_trips": 122,
+        "avg_trade": 252.13222,
+        "n_fills": 741
+      },
+      "holdout": {
+        "total_return": -0.008192,
+        "cagr": -0.005649,
+        "sharpe": -0.115323,
+        "sortino": -0.161869,
+        "calmar": -0.10098,
+        "max_drawdown": -0.055941,
+        "max_drawdown_duration_bars": 297,
+        "recovery_factor": -0.146441,
+        "ann_vol": 0.04163,
+        "bars": 531,
+        "win_rate": 0.275862,
+        "profit_factor": 0.877671,
+        "n_round_trips": 29,
+        "avg_trade": -49.620085,
+        "n_fills": 150
+      },
+      "oos_degradation": 1.135,
+      "wf_folds": [
+        0.01,
+        2.15,
+        0.88,
+        0.14,
+        0.91
+      ],
+      "monte_carlo": {
+        "prob_of_ruin": 0.0,
+        "prob_profit": 0.96997,
+        "worst_dd_p1": -0.186749
+      },
+      "worst_cost_sharpe": {
+        "bps": 50,
+        "sharpe": 0.559
+      },
+      "gates": {
+        "sharpe": true,
+        "calmar": true,
+        "profit_factor": true,
+        "max_drawdown": true,
+        "oos_positive": false,
+        "oos_degradation": false,
+        "wf_stable": true,
+        "ruin": true,
+        "slippage_viable": true
+      },
+      "passed": false
+    }
+  ],
+  "finalists": [
+    {
+      "cid": "rg-sma150-1d",
+      "per_cycle": {
+        "2019-recovery": {
+          "strategy": {
+            "cagr": 0.0,
+            "sharpe": 0.0,
+            "max_drawdown": 0.0
+          },
+          "buy_hold": {
+            "cagr": -0.071648,
+            "sharpe": 0.311842,
+            "max_drawdown": -0.640885
+          }
+        },
+        "2020-covid-bull": {
+          "strategy": {
+            "cagr": 0.129085,
+            "sharpe": 2.45109,
+            "max_drawdown": -0.021531
+          },
+          "buy_hold": {
+            "cagr": 4.631414,
+            "sharpe": 2.280666,
+            "max_drawdown": -0.621883
+          }
+        },
+        "2021-bull": {
+          "strategy": {
+            "cagr": 0.065566,
+            "sharpe": 1.446388,
+            "max_drawdown": -0.029794
+          },
+          "buy_hold": {
+            "cagr": 4.065932,
+            "sharpe": 2.042133,
+            "max_drawdown": -0.57205
+          }
+        },
+        "2022-bear": {
+          "strategy": {
+            "cagr": -0.008202,
+            "sharpe": -0.803348,
+            "max_drawdown": -0.009111
+          },
+          "buy_hold": {
+            "cagr": -0.683348,
+            "sharpe": -0.886022,
+            "max_drawdown": -0.740058
+          }
+        },
+        "2023-24-recovery": {
+          "strategy": {
+            "cagr": 0.029112,
+            "sharpe": 0.808476,
+            "max_drawdown": -0.029705
+          },
+          "buy_hold": {
+            "cagr": 0.667542,
+            "sharpe": 1.183266,
+            "max_drawdown": -0.452561
+          }
+        },
+        "2025-26-holdout": {
+          "strategy": {
+            "cagr": 0.016697,
+            "sharpe": 0.828761,
+            "max_drawdown": -0.014423
+          },
+          "buy_hold": {
+            "cagr": -0.350402,
+            "sharpe": -0.231875,
+            "max_drawdown": -0.675152
+          }
+        }
+      },
+      "param_plateau_ratio": 0.91,
+      "plateau_ok": true,
+      "risk_budget_sensitivity": {
+        "0.005": {
+          "cagr": 0.019581,
+          "sharpe": 1.125307,
+          "max_drawdown": -0.019051,
+          "recovery_factor": 7.287647,
+          "exposure": 0.036736
+        },
+        "0.01": {
+          "cagr": 0.039124,
+          "sharpe": 1.139426,
+          "max_drawdown": -0.03773,
+          "recovery_factor": 7.776908,
+          "exposure": 0.07456
+        },
+        "0.02": {
+          "cagr": 0.076733,
+          "sharpe": 1.129883,
+          "max_drawdown": -0.075266,
+          "recovery_factor": 8.523915,
+          "exposure": 0.147822
+        },
+        "0.03": {
+          "cagr": 0.113499,
+          "sharpe": 1.125098,
+          "max_drawdown": -0.110512,
+          "recovery_factor": 9.555063,
+          "exposure": 0.219985
+        }
+      },
+      "slippage_sweep": {
+        "5": {
+          "sharpe": 1.225629,
+          "cagr": 0.042091,
+          "max_drawdown": -0.036467
+        },
+        "10": {
+          "sharpe": 1.196865,
+          "cagr": 0.041101,
+          "max_drawdown": -0.036889
+        },
+        "25": {
+          "sharpe": 1.110754,
+          "cagr": 0.038138,
+          "max_drawdown": -0.03815
+        },
+        "50": {
+          "sharpe": 0.968096,
+          "cagr": 0.033233,
+          "max_drawdown": -0.047207
+        }
+      },
+      "regime_attribution": [
+        {
+          "regime": "calm-bull",
+          "bars": 523,
+          "ann_return": 0.034865,
+          "ann_vol": 0.037661,
+          "sharpe": 0.925753,
+          "mean_vol_rank": 0.081208
+        },
+        {
+          "regime": "calm-bear",
+          "bars": 374,
+          "ann_return": 0.123484,
+          "ann_vol": 0.041118,
+          "sharpe": 3.003204,
+          "mean_vol_rank": 0.085211
+        },
+        {
+          "regime": "moderate-bull",
+          "bars": 412,
+          "ann_return": 0.049403,
+          "ann_vol": 0.042417,
+          "sharpe": 1.164688,
+          "mean_vol_rank": 0.416247
+        },
+        {
+          "regime": "moderate-bear",
+          "bars": 399,
+          "ann_return": 0.032561,
+          "ann_vol": 0.043073,
+          "sharpe": 0.755944,
+          "mean_vol_rank": 0.462649
+        },
+        {
+          "regime": "turbulent-bull",
+          "bars": 414,
+          "ann_return": -0.002936,
+          "ann_vol": 0.000569,
+          "sharpe": -5.160079,
+          "mean_vol_rank": 0.7868
+        },
+        {
+          "regime": "turbulent-flat",
+          "bars": 7,
+          "ann_return": 0.0,
+          "ann_vol": 0.0,
+          "sharpe": 0.0,
+          "mean_vol_rank": 0.8333
+        },
+        {
+          "regime": "turbulent-bear",
+          "bars": 318,
+          "ann_return": -0.003783,
+          "ann_vol": 0.000671,
+          "sharpe": -5.638288,
+          "mean_vol_rank": 0.902522
+        }
+      ],
+      "full_period": {
+        "total_return": 0.293422,
+        "cagr": 0.039124,
+        "sharpe": 1.139426,
+        "sortino": 1.122286,
+        "calmar": 1.036952,
+        "max_drawdown": -0.03773,
+        "max_drawdown_duration_bars": 523,
+        "recovery_factor": 7.776908,
+        "ann_vol": 0.034196,
+        "bars": 2448,
+        "win_rate": 0.455446,
+        "profit_factor": 2.338995,
+        "n_round_trips": 101,
+        "avg_trade": 290.516877,
+        "n_fills": 398
+      },
+      "validation": {
+        "cid": "rg-sma150-1d",
+        "family": "regime-trend",
+        "timeframe": "1Day",
+        "selection": {
+          "total_return": 0.262692,
+          "cagr": 0.045436,
+          "sharpe": 1.214678,
+          "sortino": 1.272782,
+          "calmar": 1.204233,
+          "max_drawdown": -0.03773,
+          "max_drawdown_duration_bars": 523,
+          "recovery_factor": 6.962443,
+          "ann_vol": 0.03715,
+          "bars": 1917,
+          "win_rate": 0.469136,
+          "profit_factor": 2.53547,
+          "n_round_trips": 81,
+          "avg_trade": 324.311521,
+          "n_fills": 331
+        },
+        "holdout": {
+          "total_return": 0.024337,
+          "cagr": 0.016697,
+          "sharpe": 0.828761,
+          "sortino": 0.596263,
+          "calmar": 1.157719,
+          "max_drawdown": -0.014423,
+          "max_drawdown_duration_bars": 252,
+          "recovery_factor": 1.687397,
+          "ann_vol": 0.020228,
+          "bars": 531,
+          "win_rate": 0.4,
+          "profit_factor": 1.639492,
+          "n_round_trips": 20,
+          "avg_trade": 153.648567,
+          "n_fills": 67
+        },
+        "oos_degradation": 0.318,
+        "wf_folds": [
+          1.9,
+          2.67,
+          -2.0,
+          1.12,
+          0.42
+        ],
+        "monte_carlo": {
+          "prob_of_ruin": 0.0,
+          "prob_profit": 0.995996,
+          "worst_dd_p1": -0.095882
+        },
+        "worst_cost_sharpe": {
+          "bps": 50,
+          "sharpe": 0.968
+        },
+        "gates": {
+          "sharpe": true,
+          "calmar": true,
+          "profit_factor": true,
+          "max_drawdown": true,
+          "oos_positive": true,
+          "oos_degradation": true,
+          "wf_stable": true,
+          "ruin": true,
+          "slippage_viable": true
+        },
+        "passed": true
+      }
+    },
+    {
+      "cid": "rg-sma200-1d",
+      "per_cycle": {
+        "2019-recovery": {
+          "strategy": {
+            "cagr": 0.0,
+            "sharpe": 0.0,
+            "max_drawdown": 0.0
+          },
+          "buy_hold": {
+            "cagr": -0.071648,
+            "sharpe": 0.311842,
+            "max_drawdown": -0.640885
+          }
+        },
+        "2020-covid-bull": {
+          "strategy": {
+            "cagr": 0.12046,
+            "sharpe": 2.331369,
+            "max_drawdown": -0.021531
+          },
+          "buy_hold": {
+            "cagr": 4.631414,
+            "sharpe": 2.280666,
+            "max_drawdown": -0.621883
+          }
+        },
+        "2021-bull": {
+          "strategy": {
+            "cagr": 0.079062,
+            "sharpe": 1.710094,
+            "max_drawdown": -0.029691
+          },
+          "buy_hold": {
+            "cagr": 4.065932,
+            "sharpe": 2.042133,
+            "max_drawdown": -0.57205
+          }
+        },
+        "2022-bear": {
+          "strategy": {
+            "cagr": -0.012667,
+            "sharpe": -1.865827,
+            "max_drawdown": -0.013577
+          },
+          "buy_hold": {
+            "cagr": -0.683348,
+            "sharpe": -0.886022,
+            "max_drawdown": -0.740058
+          }
+        },
+        "2023-24-recovery": {
+          "strategy": {
+            "cagr": 0.025735,
+            "sharpe": 0.707191,
+            "max_drawdown": -0.029705
+          },
+          "buy_hold": {
+            "cagr": 0.667542,
+            "sharpe": 1.183266,
+            "max_drawdown": -0.452561
+          }
+        },
+        "2025-26-holdout": {
+          "strategy": {
+            "cagr": 0.015005,
+            "sharpe": 0.784778,
+            "max_drawdown": -0.015504
+          },
+          "buy_hold": {
+            "cagr": -0.350402,
+            "sharpe": -0.231875,
+            "max_drawdown": -0.675152
+          }
+        }
+      },
+      "param_plateau_ratio": 0.934,
+      "plateau_ok": true,
+      "risk_budget_sensitivity": {
+        "0.005": {
+          "cagr": 0.01884,
+          "sharpe": 1.084063,
+          "max_drawdown": -0.020222,
+          "recovery_factor": 6.591629,
+          "exposure": 0.03639
+        },
+        "0.01": {
+          "cagr": 0.037996,
+          "sharpe": 1.111524,
+          "max_drawdown": -0.040037,
+          "recovery_factor": 7.094419,
+          "exposure": 0.074937
+        },
+        "0.02": {
+          "cagr": 0.074387,
+          "sharpe": 1.10134,
+          "max_drawdown": -0.078471,
+          "recovery_factor": 7.872064,
+          "exposure": 0.148557
+        },
+        "0.03": {
+          "cagr": 0.109857,
+          "sharpe": 1.096097,
+          "max_drawdown": -0.115372,
+          "recovery_factor": 8.765531,
+          "exposure": 0.221052
+        }
+      },
+      "slippage_sweep": {
+        "5": {
+          "sharpe": 1.194006,
+          "cagr": 0.040813,
+          "max_drawdown": -0.038987
+        },
+        "10": {
+          "sharpe": 1.166479,
+          "cagr": 0.039873,
+          "max_drawdown": -0.039337
+        },
+        "25": {
+          "sharpe": 1.0841,
+          "cagr": 0.03706,
+          "max_drawdown": -0.040386
+        },
+        "50": {
+          "sharpe": 0.947693,
+          "cagr": 0.032403,
+          "max_drawdown": -0.045364
+        }
+      },
+      "regime_attribution": [
+        {
+          "regime": "calm-bull",
+          "bars": 523,
+          "ann_return": 0.021943,
+          "ann_vol": 0.03845,
+          "sharpe": 0.570699,
+          "mean_vol_rank": 0.081208
+        },
+        {
+          "regime": "calm-bear",
+          "bars": 374,
+          "ann_return": 0.129854,
+          "ann_vol": 0.039658,
+          "sharpe": 3.274325,
+          "mean_vol_rank": 0.085211
+        },
+        {
+          "regime": "moderate-bull",
+          "bars": 412,
+          "ann_return": 0.046699,
+          "ann_vol": 0.041976,
+          "sharpe": 1.112501,
+          "mean_vol_rank": 0.416247
+        },
+        {
+          "regime": "moderate-bear",
+          "bars": 399,
+          "ann_return": 0.039239,
+          "ann_vol": 0.04325,
+          "sharpe": 0.907255,
+          "mean_vol_rank": 0.462649
+        },
+        {
+          "regime": "turbulent-bull",
+          "bars": 414,
+          "ann_return": -0.002978,
+          "ann_vol": 0.00057,
+          "sharpe": -5.224655,
+          "mean_vol_rank": 0.7868
+        },
+        {
+          "regime": "turbulent-flat",
+          "bars": 7,
+          "ann_return": 0.0,
+          "ann_vol": 0.0,
+          "sharpe": 0.0,
+          "mean_vol_rank": 0.8333
+        },
+        {
+          "regime": "turbulent-bear",
+          "bars": 318,
+          "ann_return": -0.003234,
+          "ann_vol": 0.000627,
+          "sharpe": -5.160984,
+          "mean_vol_rank": 0.902522
+        }
+      ],
+      "full_period": {
+        "total_return": 0.284038,
+        "cagr": 0.037996,
+        "sharpe": 1.111524,
+        "sortino": 1.091566,
+        "calmar": 0.949029,
+        "max_drawdown": -0.040037,
+        "max_drawdown_duration_bars": 756,
+        "recovery_factor": 7.094419,
+        "ann_vol": 0.034074,
+        "bars": 2448,
+        "win_rate": 0.484536,
+        "profit_factor": 2.268838,
+        "n_round_trips": 97,
+        "avg_trade": 292.823064,
+        "n_fills": 396
+      },
+      "validation": {
+        "cid": "rg-sma200-1d",
+        "family": "regime-trend",
+        "timeframe": "1Day",
+        "selection": {
+          "total_return": 0.256567,
+          "cagr": 0.044468,
+          "sharpe": 1.189599,
+          "sortino": 1.249836,
+          "calmar": 1.110667,
+          "max_drawdown": -0.040037,
+          "max_drawdown_duration_bars": 756,
+          "recovery_factor": 6.408276,
+          "ann_vol": 0.037154,
+          "bars": 1917,
+          "win_rate": 0.5,
+          "profit_factor": 2.447984,
+          "n_round_trips": 80,
+          "avg_trade": 320.709185,
+          "n_fills": 343
+        },
+        "holdout": {
+          "total_return": 0.021862,
+          "cagr": 0.015005,
+          "sharpe": 0.784778,
+          "sortino": 0.542748,
+          "calmar": 0.967834,
+          "max_drawdown": -0.015504,
+          "max_drawdown_duration_bars": 252,
+          "recovery_factor": 1.410101,
+          "ann_vol": 0.019213,
+          "bars": 531,
+          "win_rate": 0.411765,
+          "profit_factor": 1.588652,
+          "n_round_trips": 17,
+          "avg_trade": 161.594258,
+          "n_fills": 53
+        },
+        "oos_degradation": 0.34,
+        "wf_folds": [
+          1.76,
+          2.89,
+          -2.32,
+          0.95,
+          0.41
+        ],
+        "monte_carlo": {
+          "prob_of_ruin": 0.0,
+          "prob_profit": 0.995495,
+          "worst_dd_p1": -0.096908
+        },
+        "worst_cost_sharpe": {
+          "bps": 50,
+          "sharpe": 0.948
+        },
+        "gates": {
+          "sharpe": true,
+          "calmar": true,
+          "profit_factor": true,
+          "max_drawdown": true,
+          "oos_positive": true,
+          "oos_degradation": true,
+          "wf_stable": true,
+          "ruin": true,
+          "slippage_viable": true
+        },
+        "passed": true
+      }
+    },
+    {
+      "cid": "rg-sma200-g75-1d",
+      "per_cycle": {
+        "2019-recovery": {
+          "strategy": {
+            "cagr": 0.0,
+            "sharpe": 0.0,
+            "max_drawdown": 0.0
+          },
+          "buy_hold": {
+            "cagr": -0.071648,
+            "sharpe": 0.311842,
+            "max_drawdown": -0.640885
+          }
+        },
+        "2020-covid-bull": {
+          "strategy": {
+            "cagr": 0.12784,
+            "sharpe": 2.363913,
+            "max_drawdown": -0.020169
+          },
+          "buy_hold": {
+            "cagr": 4.631414,
+            "sharpe": 2.280666,
+            "max_drawdown": -0.621883
+          }
+        },
+        "2021-bull": {
+          "strategy": {
+            "cagr": 0.082938,
+            "sharpe": 1.6201,
+            "max_drawdown": -0.027556
+          },
+          "buy_hold": {
+            "cagr": 4.065932,
+            "sharpe": 2.042133,
+            "max_drawdown": -0.57205
+          }
+        },
+        "2022-bear": {
+          "strategy": {
+            "cagr": -0.012667,
+            "sharpe": -1.865827,
+            "max_drawdown": -0.013577
+          },
+          "buy_hold": {
+            "cagr": -0.683348,
+            "sharpe": -0.886022,
+            "max_drawdown": -0.740058
+          }
+        },
+        "2023-24-recovery": {
+          "strategy": {
+            "cagr": 0.018177,
+            "sharpe": 0.495044,
+            "max_drawdown": -0.0385
+          },
+          "buy_hold": {
+            "cagr": 0.667542,
+            "sharpe": 1.183266,
+            "max_drawdown": -0.452561
+          }
+        },
+        "2025-26-holdout": {
+          "strategy": {
+            "cagr": 0.012792,
+            "sharpe": 0.576567,
+            "max_drawdown": -0.016252
+          },
+          "buy_hold": {
+            "cagr": -0.350402,
+            "sharpe": -0.231875,
+            "max_drawdown": -0.675152
+          }
+        }
+      },
+      "param_plateau_ratio": 1.023,
+      "plateau_ok": true,
+      "risk_budget_sensitivity": {
+        "0.005": {
+          "cagr": 0.017829,
+          "sharpe": 0.974458,
+          "max_drawdown": -0.026246,
+          "recovery_factor": 4.792268,
+          "exposure": 0.035628
+        },
+        "0.01": {
+          "cagr": 0.036857,
+          "sharpe": 1.017018,
+          "max_drawdown": -0.051796,
+          "recovery_factor": 5.301929,
+          "exposure": 0.071317
+        },
+        "0.02": {
+          "cagr": 0.072121,
+          "sharpe": 1.010061,
+          "max_drawdown": -0.105138,
+          "recovery_factor": 5.659127,
+          "exposure": 0.141385
+        },
+        "0.03": {
+          "cagr": 0.093483,
+          "sharpe": 0.92921,
+          "max_drawdown": -0.152046,
+          "recovery_factor": 5.396626,
+          "exposure": 0.209009
+        }
+      },
+      "slippage_sweep": {
+        "5": {
+          "sharpe": 1.084367,
+          "cagr": 0.039282,
+          "max_drawdown": -0.046454
+        },
+        "10": {
+          "sharpe": 1.061894,
+          "cagr": 0.038473,
+          "max_drawdown": -0.048239
+        },
+        "25": {
+          "sharpe": 0.994622,
+          "cagr": 0.03605,
+          "max_drawdown": -0.053569
+        },
+        "50": {
+          "sharpe": 0.883268,
+          "cagr": 0.032037,
+          "max_drawdown": -0.06237
+        }
+      },
+      "regime_attribution": [
+        {
+          "regime": "calm-bull",
+          "bars": 523,
+          "ann_return": 0.022276,
+          "ann_vol": 0.038516,
+          "sharpe": 0.57837,
+          "mean_vol_rank": 0.081208
+        },
+        {
+          "regime": "calm-bear",
+          "bars": 374,
+          "ann_return": 0.128338,
+          "ann_vol": 0.039719,
+          "sharpe": 3.231124,
+          "mean_vol_rank": 0.085211
+        },
+        {
+          "regime": "moderate-bull",
+          "bars": 412,
+          "ann_return": 0.036254,
+          "ann_vol": 0.042909,
+          "sharpe": 0.844908,
+          "mean_vol_rank": 0.416247
+        },
+        {
+          "regime": "moderate-bear",
+          "bars": 399,
+          "ann_return": 0.036628,
+          "ann_vol": 0.043706,
+          "sharpe": 0.838056,
+          "mean_vol_rank": 0.462649
+        },
+        {
+          "regime": "turbulent-bull",
+          "bars": 414,
+          "ann_return": -0.001705,
+          "ann_vol": 0.019989,
+          "sharpe": -0.085293,
+          "mean_vol_rank": 0.7868
+        },
+        {
+          "regime": "turbulent-flat",
+          "bars": 7,
+          "ann_return": 0.0,
+          "ann_vol": 0.0,
+          "sharpe": 0.0,
+          "mean_vol_rank": 0.8333
+        },
+        {
+          "regime": "turbulent-bear",
+          "bars": 318,
+          "ann_return": 0.005287,
+          "ann_vol": 0.022129,
+          "sharpe": 0.238919,
+          "mean_vol_rank": 0.902522
+        }
+      ],
+      "full_period": {
+        "total_return": 0.274621,
+        "cagr": 0.036857,
+        "sharpe": 1.017018,
+        "sortino": 1.050221,
+        "calmar": 0.711575,
+        "max_drawdown": -0.051796,
+        "max_drawdown_duration_bars": 833,
+        "recovery_factor": 5.301929,
+        "ann_vol": 0.036235,
+        "bars": 2448,
+        "win_rate": 0.481481,
+        "profit_factor": 2.204241,
+        "n_round_trips": 81,
+        "avg_trade": 339.038234,
+        "n_fills": 467
+      },
+      "validation": {
+        "cid": "rg-sma200-g75-1d",
+        "family": "regime-trend",
+        "timeframe": "1Day",
+        "selection": {
+          "total_return": 0.250818,
+          "cagr": 0.043556,
+          "sharpe": 1.107164,
+          "sortino": 1.217833,
+          "calmar": 1.131323,
+          "max_drawdown": -0.0385,
+          "max_drawdown_duration_bars": 521,
+          "recovery_factor": 6.514807,
+          "ann_vol": 0.039202,
+          "bars": 1917,
+          "win_rate": 0.483871,
+          "profit_factor": 2.408127,
+          "n_round_trips": 62,
+          "avg_trade": 404.743403,
+          "n_fills": 402
+        },
+        "holdout": {
+          "total_return": 0.018628,
+          "cagr": 0.012792,
+          "sharpe": 0.576567,
+          "sortino": 0.427382,
+          "calmar": 0.787102,
+          "max_drawdown": -0.016252,
+          "max_drawdown_duration_bars": 252,
+          "recovery_factor": 1.146212,
+          "ann_vol": 0.022483,
+          "bars": 531,
+          "win_rate": 0.473684,
+          "profit_factor": 1.47516,
+          "n_round_trips": 19,
+          "avg_trade": 124.631892,
+          "n_fills": 65
+        },
+        "oos_degradation": 0.479,
+        "wf_folds": [
+          1.76,
+          2.64,
+          -1.88,
+          0.82,
+          0.14
+        ],
+        "monte_carlo": {
+          "prob_of_ruin": 0.0,
+          "prob_profit": 0.995996,
+          "worst_dd_p1": -0.11371
+        },
+        "worst_cost_sharpe": {
+          "bps": 50,
+          "sharpe": 0.883
+        },
+        "gates": {
+          "sharpe": true,
+          "calmar": true,
+          "profit_factor": true,
+          "max_drawdown": true,
+          "oos_positive": true,
+          "oos_degradation": true,
+          "wf_stable": true,
+          "ruin": true,
+          "slippage_viable": true
+        },
+        "passed": true
+      }
+    },
+    {
+      "cid": "rg-sma100-1d",
+      "per_cycle": {
+        "2019-recovery": {
+          "strategy": {
+            "cagr": -0.014963,
+            "sharpe": -2.931488,
+            "max_drawdown": -0.00435
+          },
+          "buy_hold": {
+            "cagr": -0.071648,
+            "sharpe": 0.311842,
+            "max_drawdown": -0.640885
+          }
+        },
+        "2020-covid-bull": {
+          "strategy": {
+            "cagr": 0.124884,
+            "sharpe": 2.371324,
+            "max_drawdown": -0.021631
+          },
+          "buy_hold": {
+            "cagr": 4.631414,
+            "sharpe": 2.280666,
+            "max_drawdown": -0.621883
+          }
+        },
+        "2021-bull": {
+          "strategy": {
+            "cagr": 0.066668,
+            "sharpe": 1.517606,
+            "max_drawdown": -0.029778
+          },
+          "buy_hold": {
+            "cagr": 4.065932,
+            "sharpe": 2.042133,
+            "max_drawdown": -0.57205
+          }
+        },
+        "2022-bear": {
+          "strategy": {
+            "cagr": -0.030197,
+            "sharpe": -1.606622,
+            "max_drawdown": -0.038404
+          },
+          "buy_hold": {
+            "cagr": -0.683348,
+            "sharpe": -0.886022,
+            "max_drawdown": -0.740058
+          }
+        },
+        "2023-24-recovery": {
+          "strategy": {
+            "cagr": 0.012632,
+            "sharpe": 0.373899,
+            "max_drawdown": -0.054157
+          },
+          "buy_hold": {
+            "cagr": 0.667542,
+            "sharpe": 1.183266,
+            "max_drawdown": -0.452561
+          }
+        },
+        "2025-26-holdout": {
+          "strategy": {
+            "cagr": 0.010827,
+            "sharpe": 0.534641,
+            "max_drawdown": -0.022516
+          },
+          "buy_hold": {
+            "cagr": -0.350402,
+            "sharpe": -0.231875,
+            "max_drawdown": -0.675152
+          }
+        }
+      },
+      "param_plateau_ratio": 1.313,
+      "plateau_ok": true,
+      "risk_budget_sensitivity": {
+        "0.005": {
+          "cagr": 0.013854,
+          "sharpe": 0.798895,
+          "max_drawdown": -0.02993,
+          "recovery_factor": 3.22837,
+          "exposure": 0.036793
+        },
+        "0.01": {
+          "cagr": 0.028418,
+          "sharpe": 0.835592,
+          "max_drawdown": -0.058997,
+          "recovery_factor": 3.50293,
+          "exposure": 0.074742
+        },
+        "0.02": {
+          "cagr": 0.054785,
+          "sharpe": 0.823635,
+          "max_drawdown": -0.11754,
+          "recovery_factor": 3.657135,
+          "exposure": 0.148296
+        },
+        "0.03": {
+          "cagr": 0.06612,
+          "sharpe": 0.869471,
+          "max_drawdown": -0.151255,
+          "recovery_factor": 3.544228,
+          "exposure": 0.191474
+        }
+      },
+      "slippage_sweep": {
+        "5": {
+          "sharpe": 0.939405,
+          "cagr": 0.032003,
+          "max_drawdown": -0.055781
+        },
+        "10": {
+          "sharpe": 0.904755,
+          "cagr": 0.030806,
+          "max_drawdown": -0.056855
+        },
+        "25": {
+          "sharpe": 0.801085,
+          "cagr": 0.027226,
+          "max_drawdown": -0.060241
+        },
+        "50": {
+          "sharpe": 0.629411,
+          "cagr": 0.0213,
+          "max_drawdown": -0.068287
+        }
+      },
+      "regime_attribution": [
+        {
+          "regime": "calm-bull",
+          "bars": 523,
+          "ann_return": 0.01479,
+          "ann_vol": 0.039382,
+          "sharpe": 0.375542,
+          "mean_vol_rank": 0.081208
+        },
+        {
+          "regime": "calm-bear",
+          "bars": 374,
+          "ann_return": 0.104179,
+          "ann_vol": 0.041597,
+          "sharpe": 2.504459,
+          "mean_vol_rank": 0.085211
+        },
+        {
+          "regime": "moderate-bull",
+          "bars": 412,
+          "ann_return": 0.044965,
+          "ann_vol": 0.042023,
+          "sharpe": 1.070017,
+          "mean_vol_rank": 0.416247
+        },
+        {
+          "regime": "moderate-bear",
+          "bars": 399,
+          "ann_return": 0.017293,
+          "ann_vol": 0.041255,
+          "sharpe": 0.419164,
+          "mean_vol_rank": 0.462649
+        },
+        {
+          "regime": "turbulent-bull",
+          "bars": 414,
+          "ann_return": -0.002419,
+          "ann_vol": 0.00051,
+          "sharpe": -4.746042,
+          "mean_vol_rank": 0.7868
+        },
+        {
+          "regime": "turbulent-flat",
+          "bars": 7,
+          "ann_return": 0.0,
+          "ann_vol": 0.0,
+          "sharpe": 0.0,
+          "mean_vol_rank": 0.8333
+        },
+        {
+          "regime": "turbulent-bear",
+          "bars": 318,
+          "ann_return": -0.003519,
+          "ann_vol": 0.000647,
+          "sharpe": -5.440663,
+          "mean_vol_rank": 0.902522
+        }
+      ],
+      "full_period": {
+        "total_return": 0.206662,
+        "cagr": 0.028418,
+        "sharpe": 0.835592,
+        "sortino": 0.840812,
+        "calmar": 0.481679,
+        "max_drawdown": -0.058997,
+        "max_drawdown_duration_bars": 838,
+        "recovery_factor": 3.50293,
+        "ann_vol": 0.034236,
+        "bars": 2448,
+        "win_rate": 0.375,
+        "profit_factor": 1.757642,
+        "n_round_trips": 120,
+        "avg_trade": 172.218349,
+        "n_fills": 445
+      },
+      "validation": {
+        "cid": "rg-sma100-1d",
+        "family": "regime-trend",
+        "timeframe": "1Day",
+        "selection": {
+          "total_return": 0.18794,
+          "cagr": 0.033352,
+          "sharpe": 0.901647,
+          "sortino": 0.947838,
+          "calmar": 0.565323,
+          "max_drawdown": -0.058997,
+          "max_drawdown_duration_bars": 838,
+          "recovery_factor": 3.185587,
+          "ann_vol": 0.037153,
+          "bars": 1917,
+          "win_rate": 0.391753,
+          "profit_factor": 1.853442,
+          "n_round_trips": 97,
+          "avg_trade": 193.752309,
+          "n_fills": 358
+        },
+        "holdout": {
+          "total_return": 0.01576,
+          "cagr": 0.010827,
+          "sharpe": 0.534641,
+          "sortino": 0.468329,
+          "calmar": 0.480863,
+          "max_drawdown": -0.022516,
+          "max_drawdown_duration_bars": 252,
+          "recovery_factor": 0.699945,
+          "ann_vol": 0.020536,
+          "bars": 531,
+          "win_rate": 0.304348,
+          "profit_factor": 1.356234,
+          "n_round_trips": 23,
+          "avg_trade": 81.401214,
+          "n_fills": 87
+        },
+        "oos_degradation": 0.407,
+        "wf_folds": [
+          1.72,
+          2.76,
+          -2.45,
+          0.94,
+          -0.33
+        ],
+        "monte_carlo": {
+          "prob_of_ruin": 0.0,
+          "prob_profit": 0.975475,
+          "worst_dd_p1": -0.122753
+        },
+        "worst_cost_sharpe": {
+          "bps": 50,
+          "sharpe": 0.629
+        },
+        "gates": {
+          "sharpe": true,
+          "calmar": true,
+          "profit_factor": true,
+          "max_drawdown": true,
+          "oos_positive": true,
+          "oos_degradation": true,
+          "wf_stable": true,
+          "ruin": true,
+          "slippage_viable": true
+        },
+        "passed": true
+      }
+    }
+  ],
+  "tf_confirmation_4h": [
+    {
+      "cid": "sma150-4h",
+      "family": "sma",
+      "history_from": "2022-01-01",
+      "selection": {
+        "total_return": 0.032666,
+        "cagr": 0.011218,
+        "sharpe": 0.216482,
+        "sortino": 0.22648,
+        "calmar": 0.134966,
+        "max_drawdown": -0.08312,
+        "max_drawdown_duration_bars": 2486,
+        "recovery_factor": 0.392993,
+        "ann_vol": 0.059775,
+        "bars": 6311,
+        "win_rate": 0.301676,
+        "profit_factor": 1.075637,
+        "n_round_trips": 179,
+        "avg_trade": 18.248975,
+        "n_fills": 1222
+      },
+      "holdout": {
+        "total_return": 0.026737,
+        "cagr": 0.018303,
+        "sharpe": 0.337046,
+        "sortino": 0.340229,
+        "calmar": 0.258805,
+        "max_drawdown": -0.07072,
+        "max_drawdown_duration_bars": 1836,
+        "recovery_factor": 0.37807,
+        "ann_vol": 0.058963,
+        "bars": 3187,
+        "win_rate": 0.195652,
+        "profit_factor": 1.112941,
+        "n_round_trips": 92,
+        "avg_trade": 30.011227,
+        "n_fills": 517
+      }
+    },
+    {
+      "cid": "sma300-4h",
+      "family": "sma",
+      "history_from": "2022-01-01",
+      "selection": {
+        "total_return": -0.031184,
+        "cagr": -0.010935,
+        "sharpe": -0.157216,
+        "sortino": -0.161899,
+        "calmar": -0.105105,
+        "max_drawdown": -0.10404,
+        "max_drawdown_duration_bars": 1859,
+        "recovery_factor": -0.299732,
+        "ann_vol": 0.058909,
+        "bars": 6311,
+        "win_rate": 0.307692,
+        "profit_factor": 0.930084,
+        "n_round_trips": 182,
+        "avg_trade": -17.134179,
+        "n_fills": 1347
+      },
+      "holdout": {
+        "total_return": 0.072575,
+        "cagr": 0.049338,
+        "sharpe": 0.866872,
+        "sortino": 0.873623,
+        "calmar": 0.962052,
+        "max_drawdown": -0.051284,
+        "max_drawdown_duration_bars": 1836,
+        "recovery_factor": 1.415153,
+        "ann_vol": 0.057458,
+        "bars": 3187,
+        "win_rate": 0.298507,
+        "profit_factor": 1.37873,
+        "n_round_trips": 67,
+        "avg_trade": 104.943217,
+        "n_fills": 512
+      }
+    },
+    {
+      "cid": "sma600-4h",
+      "family": "sma",
+      "history_from": "2022-01-01",
+      "selection": {
+        "total_return": -0.122762,
+        "cagr": -0.04444,
+        "sharpe": -0.746507,
+        "sortino": -0.753979,
+        "calmar": -0.317883,
+        "max_drawdown": -0.1398,
+        "max_drawdown_duration_bars": 5971,
+        "recovery_factor": -0.878124,
+        "ann_vol": 0.058595,
+        "bars": 6311,
+        "win_rate": 0.28125,
+        "profit_factor": 0.738763,
+        "n_round_trips": 192,
+        "avg_trade": -64.087015,
+        "n_fills": 1503
+      },
+      "holdout": {
+        "total_return": -0.035221,
+        "cagr": -0.024345,
+        "sharpe": -0.763401,
+        "sortino": -0.394947,
+        "calmar": -0.48168,
+        "max_drawdown": -0.050543,
+        "max_drawdown_duration_bars": 3153,
+        "recovery_factor": -0.696849,
+        "ann_vol": 0.03163,
+        "bars": 3187,
+        "win_rate": 0.307692,
+        "profit_factor": 0.605914,
+        "n_round_trips": 26,
+        "avg_trade": -115.603776,
+        "n_fills": 199
+      }
+    },
+    {
+      "cid": "ensemble-4h",
+      "family": "ensemble",
+      "history_from": "2022-01-01",
+      "selection": {
+        "total_return": -0.089812,
+        "cagr": -0.032133,
+        "sharpe": -0.41613,
+        "sortino": -0.543028,
+        "calmar": -0.220573,
+        "max_drawdown": -0.145679,
+        "max_drawdown_duration_bars": 6005,
+        "recovery_factor": -0.616504,
+        "ann_vol": 0.072223,
+        "bars": 6311,
+        "win_rate": 0.302521,
+        "profit_factor": 0.874415,
+        "n_round_trips": 357,
+        "avg_trade": -25.238198,
+        "n_fills": 2126
+      },
+      "holdout": {
+        "total_return": -0.041374,
+        "cagr": -0.028627,
+        "sharpe": -1.381791,
+        "sortino": -0.562757,
+        "calmar": -0.500783,
+        "max_drawdown": -0.057164,
+        "max_drawdown_duration_bars": 3153,
+        "recovery_factor": -0.723769,
+        "ann_vol": 0.020862,
+        "bars": 3187,
+        "win_rate": 0.275862,
+        "profit_factor": 0.292454,
+        "n_round_trips": 29,
+        "avg_trade": -126.887436,
+        "n_fills": 115
+      }
+    }
+  ],
+  "buy_hold_full": {
+    "total_return": 4.94745,
+    "cagr": 0.223671,
+    "sharpe": 0.673375,
+    "sortino": 0.927225,
+    "calmar": 0.238035,
+    "max_drawdown": -0.939655,
+    "max_drawdown_duration_bars": 1382,
+    "recovery_factor": 5.265177,
+    "ann_vol": 0.871554,
+    "bars": 3225,
+    "win_rate": 0.508375,
+    "profit_factor": 1.108976,
+    "avg_trade": 0.001608,
+    "n_fills": 0
+  }
+}

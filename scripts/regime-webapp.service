@@ -1,0 +1,17 @@
+[Unit]
+Description=Regime Terminal Web App (Next.js, port 3000)
+After=network.target regime-dashboard.service
+
+[Service]
+Type=simple
+User=ec2-user
+Group=ec2-user
+WorkingDirectory=/home/ec2-user/regime-trader/web-app
+Environment=NODE_ENV=production
+Environment=PORT=3000
+ExecStart=/usr/bin/node node_modules/.bin/next start -p 3000
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

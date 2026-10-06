@@ -107,6 +107,48 @@ class DataProvider:
                 log.error("could not load %s: %s", sym, exc)
         return out
 
+    def get_latest_prices(self, symbols: list[str]) -> dict[str, float]:
+        """Best-effort latest trade price per symbol (read-only quote data).
+
+        Missing or failed symbols are simply absent from the result —
+        callers should fall back to a cached/entry price.
+        """
+        if not symbols:
+            return {}
+        stocks = [s for s in symbols if not is_crypto(s)]
+        cryptos = [s for s in symbols if is_crypto(s)]
+        out: dict[str, float] = {}
+        if stocks:
+            out.update(self._latest_stock_prices(stocks))
+        if cryptos:
+            out.update(self._latest_crypto_prices(cryptos))
+        return out
+
+    def _latest_stock_prices(self, symbols: list[str]) -> dict[str, float]:
+        from alpaca.data.enums import DataFeed
+        from alpaca.data.requests import StockLatestTradeRequest
+
+        feeds = [self.cfg.data.feed, "iex"] if self.cfg.data.feed != "iex" else ["iex"]
+        for feed in feeds:
+            try:
+                req = StockLatestTradeRequest(symbol_or_symbols=symbols, feed=DataFeed(feed))
+                trades = self._stocks().get_stock_latest_trade(req)
+                return {sym: float(t.price) for sym, t in trades.items()}
+            except Exception as exc:
+                log.warning("latest trade feed %s failed: %s", feed, exc)
+        return {}
+
+    def _latest_crypto_prices(self, symbols: list[str]) -> dict[str, float]:
+        from alpaca.data.requests import CryptoLatestTradeRequest
+
+        try:
+            req = CryptoLatestTradeRequest(symbol_or_symbols=symbols)
+            trades = self._crypto().get_crypto_latest_trade(req)
+            return {sym: float(t.price) for sym, t in trades.items()}
+        except Exception as exc:
+            log.warning("latest crypto trade failed: %s", exc)
+            return {}
+
     # ------------------------------------------------------------------
     def _read_cache(self, path: Path) -> pd.DataFrame | None:
         if not path.exists():
@@ -124,8 +166,10 @@ class DataProvider:
 
         tf_map = {
             "1Day": TimeFrame.Day,
+            "4Hour": TimeFrame(4, TimeFrameUnit.Hour),
             "1Hour": TimeFrame.Hour,
             "15Min": TimeFrame(15, TimeFrameUnit.Minute),
+            "5Min": TimeFrame(5, TimeFrameUnit.Minute),
         }
         tf = tf_map.get(timeframe, TimeFrame.Day)
 

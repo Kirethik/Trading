@@ -67,6 +67,26 @@ class OmnivoreDeployer:
     def save(self) -> None:
         atomic_write_json(self.ledger_path, self.ledger)
 
+    def reconcile_enabled(self) -> list[str]:
+        """Re-enable strategies that were benched without ever trading.
+
+        A strategy is only meant to be disabled by `prune()` after it earns a
+        real losing record (>= ``min_observations`` of equity history with
+        negative P&L and Sharpe). A disabled strategy with **zero trades** is
+        therefore a stale flag — leftover from an earlier ledger state — and its
+        capital sits frozen, never deployed. Re-enable those so the cohort can
+        put the capital to work. Never touches a strategy that actually traded,
+        so legitimate prunes stick. Returns the re-enabled ids (does not save)."""
+        fixed = []
+        for sid, e in self.ledger.items():
+            if not e.get("enabled", True) and int(e.get("trades", 0) or 0) == 0:
+                e["enabled"] = True
+                fixed.append(sid)
+        if fixed:
+            log.info("omnivore reconcile: re-enabled %d never-traded strategies",
+                     len(fixed), extra={"ctx": {"reenabled": fixed}})
+        return fixed
+
     def _slice_equity(self, entry: dict, prices: dict[str, float]) -> float:
         held = sum(
             p["qty"] * prices.get(s, p["entry"]) for s, p in entry["positions"].items()
@@ -90,6 +110,7 @@ class OmnivoreDeployer:
     # --------------------------------------------------------------- cycle
     def run_cycle(self) -> dict:
         """One pass over the whole cohort. Returns a cycle summary."""
+        self.reconcile_enabled()  # self-heal: never leave a never-traded strategy benched
         all_symbols = sorted({s for om in self.cohort for s in om.symbols})
         bars = self.provider.get_universe_bars(all_symbols, refresh=True)
         closes = aligned_closes(bars)
@@ -173,8 +194,8 @@ class OmnivoreDeployer:
             sym, px = d.intent.symbol, d.intent.price
             if d.intent.side == "buy" and delta > 1e-6:
                 qty = delta * p.equity / px
-                self._enter(om, entry, sym, qty, px, d.intent.stop_price, d.intent.signal_id)
-                summary["orders"] += 1
+                if self._enter(om, entry, sym, qty, px, d.intent.stop_price, d.intent.signal_id):
+                    summary["orders"] += 1
             elif d.intent.side == "sell" and delta < -1e-6:
                 pos = entry["positions"].get(sym)
                 if pos:
@@ -189,27 +210,33 @@ class OmnivoreDeployer:
 
     # ----------------------------------------------------------- execution
     def _enter(self, om: OmniStrategy, entry: dict, sym: str, qty: float, px: float,
-               stop: float | None, signal_id: str) -> None:
-        if qty * px < 10:  # ignore dust orders
-            return
+               stop: float | None, signal_id: str) -> bool:
+        """Returns True only if a position was actually changed (so the caller
+        counts a real order, never a dropped dust intent)."""
+        if qty * px < 10:  # ignore dust orders — nothing happened
+            return False
+        # book at the SAME effective price the broker pays (limit offset),
+        # so the ledger cash tracks the real paper balance instead of drifting
+        # optimistically above it (mirrors the backtest's slippage model).
+        offset = self.cfg.broker.limit_offset_bps / 10_000.0
+        fill_px = px * (1 + offset)
         if not self.dry_run and self.broker is not None:
-            offset = self.cfg.broker.limit_offset_bps / 10_000.0
-            self.broker.submit_entry(sym, qty, px * (1 + offset),
-                                     stop or px * 0.9, signal_id=signal_id)
+            self.broker.submit_entry(sym, qty, fill_px, stop or px * 0.9, signal_id=signal_id)
         pos = entry["positions"].get(sym)
         if pos is None:
-            entry["positions"][sym] = {"qty": qty, "entry": px, "stop": stop or px * 0.9}
+            entry["positions"][sym] = {"qty": qty, "entry": fill_px, "stop": stop or px * 0.9}
         else:
-            cost = pos["entry"] * pos["qty"] + px * qty
+            cost = pos["entry"] * pos["qty"] + fill_px * qty
             pos["qty"] += qty
             pos["entry"] = cost / pos["qty"]
             if stop and stop > pos["stop"]:
                 pos["stop"] = stop
-        entry["cash"] -= qty * px
+        entry["cash"] -= qty * fill_px
         entry["trades"] += 1
         log.info("omnivore entry", extra={"ctx": {"strategy": om.id, "symbol": sym,
-                                                  "qty": round(qty, 6), "price": px,
+                                                  "qty": round(qty, 6), "price": fill_px,
                                                   "signal_id": signal_id, "dry_run": self.dry_run}})
+        return True
 
     def _exit(self, om: OmniStrategy, entry: dict, sym: str, qty: float, px: float, reason: str) -> None:
         pos = entry["positions"].get(sym)
@@ -223,12 +250,14 @@ class OmnivoreDeployer:
             except Exception as exc:
                 log.error("omnivore exit failed %s %s: %s", om.id, sym, exc)
                 return
-        entry["cash"] += qty * px
-        entry["realized_pnl"] += (px - pos["entry"]) * qty
-        pos["qty"] -= qty
+        # sells cross the spread the other way: credit the offset-adjusted price
+        offset = self.cfg.broker.limit_offset_bps / 10_000.0
+        fill_px = px * (1 - offset)
+        entry["cash"] += qty * fill_px
+        entry["realized_pnl"] += (fill_px - pos["entry"]) * qty
         if pos["qty"] * px < 1.0:
-            entry["cash"] += pos["qty"] * px
-            entry["realized_pnl"] += (px - pos["entry"]) * pos["qty"]
+            entry["cash"] += pos["qty"] * fill_px
+            entry["realized_pnl"] += (fill_px - pos["entry"]) * pos["qty"]
             del entry["positions"][sym]
         entry["trades"] += 1
         log.info("omnivore exit", extra={"ctx": {"strategy": om.id, "symbol": sym,

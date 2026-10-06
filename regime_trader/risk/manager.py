@@ -110,6 +110,10 @@ class OrderIntent:
     stop_price: float | None   # REQUIRED for buys — refused without one
     strategy: str = "regime-hmm"
     sector: str = "unknown"
+    # "risk" = fixed-fractional stop-distance sizing (default; every legacy path).
+    # "vol_target" = the strategy already sized by volatility, so skip the
+    # fixed-fractional risk cap (all OTHER caps/vetoes still apply).
+    sizing_mode: str = "risk"
 
 
 @dataclass
@@ -229,10 +233,13 @@ class RiskManager:
             trades_used += 1
 
         approved_buys: list[RiskDecision] = []
+        new_open = 0  # new positions approved in THIS batch count against the cap
         for intent in buys:
-            d = self._evaluate_buy(intent, portfolio, closes, status, trades_used)
+            d = self._evaluate_buy(intent, portfolio, closes, status, trades_used, new_open)
             if d.approved:
                 trades_used += 1
+                if intent.symbol not in portfolio.positions:
+                    new_open += 1
                 approved_buys.append(d)
             decisions.append(d)
 
@@ -256,6 +263,7 @@ class RiskManager:
         closes: pd.DataFrame | None,
         status: BreakerStatus,
         trades_used: int,
+        new_open: int = 0,
     ) -> RiskDecision:
         if not status.allows_buys:
             return self._reject(intent, f"circuit breaker {status.mode.value}: {'; '.join(status.reasons)}")
@@ -267,19 +275,23 @@ class RiskManager:
             return self._reject(intent, "stop must be below entry for a long position")
         if trades_used >= self.max_daily_trades:
             return self._reject(intent, f"max daily trades ({self.max_daily_trades}) reached")
-        if intent.symbol not in p.positions and len(p.positions) >= self.max_positions:
+        if intent.symbol not in p.positions and len(p.positions) + new_open >= self.max_positions:
             return self._reject(intent, f"max concurrent positions ({self.max_positions}) reached")
 
         weight = intent.target_weight
         reasons: list[str] = []
 
         # stop-distance sizing: cap so a stop-out (plus an adverse overnight
-        # gap) cannot lose more than risk_per_trade of equity
-        stop_dist = (intent.price - intent.stop_price) / intent.price
-        risk_cap = self.risk_per_trade / max(stop_dist + self.overnight_gap, 1e-6)
-        if weight > risk_cap:
-            weight = risk_cap
-            reasons.append(f"sized down by stop distance: risk cap {risk_cap:.1%}")
+        # gap) cannot lose more than risk_per_trade of equity. Skipped for
+        # vol_target sleeves — the strategy already sized by volatility, and this
+        # fixed-fractional cap would crush an allocation/vol-target position to a
+        # few percent (every other cap/veto below still applies).
+        if intent.sizing_mode != "vol_target":
+            stop_dist = (intent.price - intent.stop_price) / intent.price
+            risk_cap = self.risk_per_trade / max(stop_dist + self.overnight_gap, 1e-6)
+            if weight > risk_cap:
+                weight = risk_cap
+                reasons.append(f"sized down by stop distance: risk cap {risk_cap:.1%}")
 
         if weight > self.max_single:
             weight = self.max_single
@@ -312,6 +324,13 @@ class RiskManager:
             increase = max(0.0, weight - intent.current_weight) * status.buy_scale
             weight = intent.current_weight + increase
             reasons.append("breaker REDUCE: new exposure halved")
+
+        # An approved BUY must never shrink the position: if every cap together
+        # sized it below what we already hold, the safe action is to hold, not
+        # to relabel a reduction as a buy (downstream executors key off side).
+        if weight < intent.current_weight:
+            weight = intent.current_weight
+            reasons.append("clamped to current weight: caps left no room to add (hold)")
 
         if not reasons:
             reasons = ["approved unmodified"]
@@ -362,7 +381,14 @@ class RiskManager:
         for d in approved_buys:
             d.final_weight *= scale
             d.reasons.append(f"portfolio cap {cap:.2f}x: buys scaled to {scale:.0%}")
+            # collective scaling must not turn a buy into a reduction either:
+            # if untouched positions ate the budget, the buy holds at current.
+            if d.final_weight < d.intent.current_weight:
+                d.final_weight = d.intent.current_weight
+                d.reasons.append("clamped to current weight: no room left to add (hold)")
 
     # -------------------------------------------------------------- helpers
-    def protective_stop(self, entry_price: float, atr_value: float) -> float:
-        return max(0.01, entry_price - self.stop_atr_mult * atr_value)
+    def protective_stop(self, entry_price: float, atr_value: float,
+                        mult: float | None = None) -> float:
+        m = mult if (mult is not None and mult > 0) else self.stop_atr_mult
+        return max(0.01, entry_price - m * atr_value)

@@ -85,6 +85,8 @@ class WalkForwardEngine:
         start_ts: pd.Timestamp | None = None,
         risk_manager: RiskManager | None = None,
         initial_capital: float | None = None,
+        periods_per_year: int | None = None,
+        max_lookback: int | None = None,
     ):
         cfg = get_config()
         self.cfg = cfg
@@ -101,6 +103,14 @@ class WalkForwardEngine:
             )
         self.risk = risk_manager
         self.capital = initial_capital or cfg.backtest.initial_capital
+        # annualization basis: 252 (equities, default) or crypto 365/2190 set by
+        # the research harness per timeframe so Sharpe/CAGR/vol are correct.
+        self.ppy = periods_per_year or int(cfg.backtest.get("periods_per_year", 252))
+        # optional cap on how many trailing bars a strategy sees each step. None
+        # = full history (production default). Set by research to bound the
+        # O(n^2) per-bar indicator recompute on long crypto series; safe because
+        # every indicator here converges within a few multiples of its window.
+        self.max_lookback = max_lookback
         self.slippage = cfg.backtest.slippage_bps / 10_000.0
         self.commission = cfg.backtest.commission
         self.threshold = cfg.allocation.rebalance_threshold
@@ -177,19 +187,26 @@ class WalkForwardEngine:
             p.peak_equity = max(p.peak_equity, p.equity)
             equity_curve[t] = p.equity
 
-            # -- 4. trailing stops tighten only
+            # -- 4. trailing stops tighten only (use per-strategy ATR mult if set)
+            _stop_mult = getattr(self.strategy, "stop_atr_mult", None) or None
             for s, pos in p.positions.items():
                 atr_v = self.atrs.at[t, s] if s in self.atrs.columns else np.nan
                 px = p.prices.get(s)
                 if px and np.isfinite(atr_v):
-                    pos.tighten_stop(self.risk.protective_stop(px, float(atr_v)))
+                    pos.tighten_stop(self.risk.protective_stop(px, float(atr_v), _stop_mult))
 
             # -- 5. signals at the close -> orders for the next bar's open
             if i < len(idx) - 1:
                 view, stab = self._regime_at(t, tracker)
+                if self.max_lookback:
+                    ctx_bars = {s: d.loc[:t].tail(self.max_lookback) for s, d in self.bars.items()}
+                    ctx_closes = self.closes.loc[:t].tail(self.max_lookback)
+                else:
+                    ctx_bars = {s: d.loc[:t] for s, d in self.bars.items()}
+                    ctx_closes = self.closes.loc[:t]
                 ctx = StrategyContext(
-                    bars={s: d.loc[:t] for s, d in self.bars.items()},
-                    closes=self.closes.loc[:t],
+                    bars=ctx_bars,
+                    closes=ctx_closes,
                     symbols=self.symbols,
                     market_proxy=self.market_proxy,
                     regime=view,
@@ -230,9 +247,9 @@ class WalkForwardEngine:
             trades=trades,
             regime_history=regime_hist,
             weights=weights,
-            metrics=compute_metrics(equity, trades if len(trades) else None),
-            per_regime=per_regime_breakdown(equity, regime_hist) if self.oracle is not None else pd.DataFrame(),
-            conf_buckets=confidence_buckets(equity, regime_hist) if self.oracle is not None else pd.DataFrame(),
+            metrics=compute_metrics(equity, trades if len(trades) else None, periods_per_year=self.ppy),
+            per_regime=per_regime_breakdown(equity, regime_hist, self.ppy) if self.oracle is not None else pd.DataFrame(),
+            conf_buckets=confidence_buckets(equity, regime_hist, periods_per_year=self.ppy) if self.oracle is not None else pd.DataFrame(),
             decisions=decisions_log,
         )
         result.metrics["avg_gross_exposure"] = float(weights.sum(axis=1).mean()) if len(weights) else 0.0
@@ -264,12 +281,15 @@ class WalkForwardEngine:
             if not np.isfinite(px):
                 continue
             atr_v = self.atrs.at[t, s] if s in self.atrs.columns else np.nan
-            stop = self.risk.protective_stop(float(px), float(atr_v)) if np.isfinite(atr_v) else None
+            strat_mult = getattr(self.strategy, "stop_atr_mult", None) or None
+            stop = self.risk.protective_stop(float(px), float(atr_v), strat_mult) if np.isfinite(atr_v) else None
+            sizing_mode = getattr(self.strategy, "sizing_mode", "risk")
             intents.append(
                 OrderIntent(
                     signal_id=new_id(), symbol=s, side="buy" if delta > 0 else "sell",
                     target_weight=target, current_weight=current, price=float(px),
                     stop_price=stop if delta > 0 else None, strategy=self.strategy.name,
+                    sizing_mode=sizing_mode,
                 )
             )
         return intents
@@ -310,6 +330,7 @@ class WalkForwardEngine:
                 realized += (fill_px - pos.entry_price) * pos.qty
                 p.cash += pos.qty * fill_px
                 del p.positions[od.symbol]
+                p.prices.pop(od.symbol, None)  # don't carry a stale mark
         p.trades_today += 1
         trade_rows.append(
             {
@@ -341,3 +362,4 @@ class WalkForwardEngine:
                 }
             )
             del p.positions[s]
+            p.prices.pop(s, None)  # don't carry a stale mark into re-entry

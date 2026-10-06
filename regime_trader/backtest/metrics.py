@@ -12,19 +12,24 @@ import pandas as pd
 TRADING_DAYS = 252
 
 
-def compute_metrics(equity: pd.Series, trades: pd.DataFrame | None = None) -> dict:
+def compute_metrics(
+    equity: pd.Series, trades: pd.DataFrame | None = None, periods_per_year: int = TRADING_DAYS
+) -> dict:
+    """Full metric set. `periods_per_year` sets annualization: 252 for equities,
+    365 for daily crypto (24/7 market), ~2190 for 4h crypto bars (365*6)."""
     equity = equity.dropna()
     if len(equity) < 3:
         return {"error": "equity curve too short"}
     rets = equity.pct_change().dropna()
-    years = len(rets) / TRADING_DAYS
+    years = len(rets) / periods_per_year
     total = float(equity.iloc[-1] / equity.iloc[0] - 1.0)
     cagr = float((equity.iloc[-1] / equity.iloc[0]) ** (1.0 / max(years, 1e-9)) - 1.0)
 
+    ann = float(np.sqrt(periods_per_year))
     std = float(rets.std())
-    sharpe = float(rets.mean() / std * np.sqrt(TRADING_DAYS)) if std > 0 else 0.0
+    sharpe = float(rets.mean() / std * ann) if std > 0 else 0.0
     downside = float(rets[rets < 0].std())
-    sortino = float(rets.mean() / downside * np.sqrt(TRADING_DAYS)) if downside > 0 else float("inf")
+    sortino = float(rets.mean() / downside * ann) if downside > 0 else float("inf")
 
     peak = equity.cummax()
     dd = equity / peak - 1.0
@@ -44,7 +49,11 @@ def compute_metrics(equity: pd.Series, trades: pd.DataFrame | None = None) -> di
         "calmar": calmar,
         "max_drawdown": max_dd,
         "max_drawdown_duration_bars": int(max_dur),
-        "ann_vol": std * float(np.sqrt(TRADING_DAYS)),
+        # recovery factor: net profit per unit of worst drawdown — how well the
+        # strategy digs out of holes. >2 is healthy; <1 means the deepest hole
+        # exceeded total gains over the test.
+        "recovery_factor": float(total / abs(max_dd)) if max_dd < 0 else float("inf"),
+        "ann_vol": std * ann,
         "bars": int(len(equity)),
     }
 
@@ -57,16 +66,20 @@ def compute_metrics(equity: pd.Series, trades: pd.DataFrame | None = None) -> di
             out["win_rate"] = float((closed["realized_pnl"] > 0).mean())
             out["profit_factor"] = float(wins / losses) if losses > 0 else float("inf")
             out["n_round_trips"] = int(len(closed))
+            out["avg_trade"] = float(closed["realized_pnl"].mean())  # mean $ PnL / round trip
         out["n_fills"] = int(len(trades))
     else:  # fallback: daily-return based
         out["win_rate"] = float((rets > 0).mean())
         wins, losses = rets[rets > 0].sum(), abs(rets[rets < 0].sum())
         out["profit_factor"] = float(wins / losses) if losses > 0 else float("inf")
+        out["avg_trade"] = float(rets.mean())  # mean per-bar return (no trade ledger)
         out["n_fills"] = 0
     return out
 
 
-def per_regime_breakdown(equity: pd.Series, regime_history: pd.DataFrame) -> pd.DataFrame:
+def per_regime_breakdown(
+    equity: pd.Series, regime_history: pd.DataFrame, periods_per_year: int = TRADING_DAYS
+) -> pd.DataFrame:
     """Strategy returns bucketed by the regime active when each bet was placed.
     Proves each environment behaves as intended (calm earns, turbulent protects)."""
     rets = equity.pct_change().dropna()
@@ -74,6 +87,7 @@ def per_regime_breakdown(equity: pd.Series, regime_history: pd.DataFrame) -> pd.
     df = pd.DataFrame({"ret": rets}).join(reg[["label", "vol_rank"]]).dropna()
     if df.empty:
         return pd.DataFrame()
+    ann = np.sqrt(periods_per_year)
     rows = []
     for label, grp in df.groupby("label"):
         std = grp["ret"].std()
@@ -81,16 +95,19 @@ def per_regime_breakdown(equity: pd.Series, regime_history: pd.DataFrame) -> pd.
             {
                 "regime": label,
                 "bars": len(grp),
-                "ann_return": grp["ret"].mean() * TRADING_DAYS,
-                "ann_vol": std * np.sqrt(TRADING_DAYS) if std == std else np.nan,
-                "sharpe": grp["ret"].mean() / std * np.sqrt(TRADING_DAYS) if std and std > 0 else 0.0,
+                "ann_return": grp["ret"].mean() * periods_per_year,
+                "ann_vol": std * ann if std == std else np.nan,
+                "sharpe": grp["ret"].mean() / std * ann if std and std > 0 else 0.0,
                 "mean_vol_rank": grp["vol_rank"].mean(),
             }
         )
     return pd.DataFrame(rows).sort_values("mean_vol_rank").reset_index(drop=True)
 
 
-def confidence_buckets(equity: pd.Series, regime_history: pd.DataFrame, n_buckets: int = 4) -> pd.DataFrame:
+def confidence_buckets(
+    equity: pd.Series, regime_history: pd.DataFrame, n_buckets: int = 4,
+    periods_per_year: int = TRADING_DAYS,
+) -> pd.DataFrame:
     """Performance by model-confidence quartile at decision time — higher
     confidence should earn better risk-adjusted returns if the model is real."""
     rets = equity.pct_change().dropna()
@@ -102,6 +119,7 @@ def confidence_buckets(equity: pd.Series, regime_history: pd.DataFrame, n_bucket
         df["bucket"] = pd.qcut(df["confidence"], n_buckets, duplicates="drop")
     except ValueError:
         return pd.DataFrame()
+    ann = np.sqrt(periods_per_year)
     rows = []
     for bucket, grp in df.groupby("bucket", observed=True):
         std = grp["ret"].std()
@@ -110,8 +128,8 @@ def confidence_buckets(equity: pd.Series, regime_history: pd.DataFrame, n_bucket
                 "confidence_bucket": str(bucket),
                 "mean_confidence": grp["confidence"].mean(),
                 "bars": len(grp),
-                "ann_return": grp["ret"].mean() * TRADING_DAYS,
-                "sharpe": grp["ret"].mean() / std * np.sqrt(TRADING_DAYS) if std and std > 0 else 0.0,
+                "ann_return": grp["ret"].mean() * periods_per_year,
+                "sharpe": grp["ret"].mean() / std * ann if std and std > 0 else 0.0,
             }
         )
     return pd.DataFrame(rows)

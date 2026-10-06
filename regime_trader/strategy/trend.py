@@ -60,23 +60,69 @@ class CrossSectionalMomentum(Strategy):
 
 
 class SMATrendFilter(Strategy):
-    """Dual moving-average / 200-SMA filter: hold what's above its long SMA."""
+    """Dual moving-average / 200-SMA filter: hold what's above its long SMA.
+
+    sizing_mode="risk" (default): equal-weight long/flat — legacy fast path.
+    sizing_mode="vol_target": band hysteresis entry/exit + per-symbol
+      volatility-target sizing so the portfolio deploys meaningful capital.
+    """
 
     name = "sma200-trend"
 
-    def __init__(self, window: int = 200):
+    def __init__(
+        self,
+        window: int = 200,
+        band: float = 0.0,
+        target_vol: float = 0.0,
+        vol_window: int = 21,
+        sizing_mode: str = "risk",
+        stop_atr_mult: float | None = None,
+    ):
         self.window = window
+        self.band = band
+        self.target_vol = target_vol
+        self.vol_window = vol_window
+        self.sizing_mode = sizing_mode
+        self.stop_atr_mult = stop_atr_mult
 
     def compute_weights(self, ctx: StrategyContext) -> dict[str, float]:
+        if self.sizing_mode == "vol_target":
+            return self._vol_target_weights(ctx)
+        # --- legacy risk path (default) ---
         holds = []
         for s in ctx.symbols:
             c = ctx.closes.get(s)
             if c is None:
                 continue
             c = c.dropna()
-            if len(c) >= self.window and c.iloc[-1] > F.sma(c, self.window).iloc[-1]:
+            # mean of the last `window` closes == F.sma(c, window).iloc[-1] (the
+            # guard guarantees a full window), but O(window) instead of rolling
+            # the whole series every bar — the interactive backtest hot path.
+            if len(c) >= self.window and c.iloc[-1] > c.iloc[-self.window:].mean():
                 holds.append(s)
         return equal_weights(holds, gross=len(holds) / max(1, len(ctx.symbols)))
+
+    def _vol_target_weights(self, ctx: StrategyContext) -> dict[str, float]:
+        """Band-hysteresis entry/exit + per-symbol vol-target sizing."""
+        out: dict[str, float] = {}
+        for s in ctx.symbols:
+            c = ctx.closes.get(s)
+            if c is None:
+                continue
+            c = c.dropna()
+            if len(c) < self.window:
+                continue
+            sma = c.iloc[-self.window:].mean()
+            entry_sig = c > sma * (1.0 + self.band)
+            exit_sig = c < sma * (1.0 - self.band)
+            if not in_position_last_signal(entry_sig, exit_sig):
+                continue
+            rv = F.realized_vol(c, self.vol_window, annualize=True).iloc[-1]
+            if not (np.isfinite(rv) and rv > 0):
+                continue
+            tv = self.target_vol if self.target_vol > 0 else 0.15
+            out[s] = tv / rv
+        return out
 
 
 class DonchianBreakout(Strategy):

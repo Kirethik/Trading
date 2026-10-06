@@ -26,6 +26,14 @@ class LiveTradingRefused(RuntimeError):
     pass
 
 
+def _round_price(symbol: str, price: float) -> float:
+    """Equities tick in pennies; crypto can be sub-dollar, so keep more
+    precision there rather than collapsing a $0.0123 token to $0.01."""
+    if is_crypto(symbol):
+        return round(float(price), 6) if price < 1.0 else round(float(price), 2)
+    return round(float(price), 2)
+
+
 class AlpacaBroker:
     def __init__(self, paper: bool | None = None, live_confirmation: str | None = None):
         cfg = get_config()
@@ -152,9 +160,11 @@ class AlpacaBroker:
 
         coid = (signal_id or f"rt-{int(time.time())}")[:48]
         if is_crypto(symbol):
+            # crypto can be sub-dollar (e.g. DOGE): 2-decimal rounding would
+            # mangle the limit, so price keeps full precision, qty rounds fine.
             req = LimitOrderRequest(
                 symbol=symbol, qty=round(qty, 6), side=OrderSide.BUY,
-                time_in_force=TimeInForce.GTC, limit_price=round(limit_price, 2),
+                time_in_force=TimeInForce.GTC, limit_price=_round_price(symbol, limit_price),
                 client_order_id=coid,
             )
         else:
@@ -162,12 +172,21 @@ class AlpacaBroker:
             if whole < 1:
                 log.info("entry for %s skipped: sized below 1 share", symbol)
                 return None
+            # A BRACKET requires BOTH protective legs; with no take-profit the
+            # correct class is OTO (one-triggers-one) carrying just the stop.
+            # Sending BRACKET with take_profit=None is rejected by Alpaca.
+            if take_profit:
+                order_class = OrderClass.BRACKET
+                tp_leg = TakeProfitRequest(limit_price=round(take_profit, 2))
+            else:
+                order_class = OrderClass.OTO
+                tp_leg = None
             req = LimitOrderRequest(
                 symbol=symbol, qty=whole, side=OrderSide.BUY,
                 time_in_force=TimeInForce.DAY, limit_price=round(limit_price, 2),
-                order_class=OrderClass.BRACKET,
+                order_class=order_class,
                 stop_loss=StopLossRequest(stop_price=round(stop_loss, 2)),
-                take_profit=TakeProfitRequest(limit_price=round(take_profit, 2)) if take_profit else None,
+                take_profit=tp_leg,
                 client_order_id=coid,
             )
         order = self._call(self.client.submit_order, req)
@@ -187,7 +206,7 @@ class AlpacaBroker:
         tif = TimeInForce.GTC if is_crypto(symbol) else TimeInForce.DAY
         if limit_price:
             req = LimitOrderRequest(symbol=symbol, qty=qty, side=OrderSide.SELL,
-                                    time_in_force=tif, limit_price=round(limit_price, 2),
+                                    time_in_force=tif, limit_price=_round_price(symbol, limit_price),
                                     client_order_id=coid)
         else:
             req = MarketOrderRequest(symbol=symbol, qty=qty, side=OrderSide.SELL,

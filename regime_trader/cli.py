@@ -7,11 +7,17 @@
   python -m regime_trader dry-run        one full live cycle, no orders sent
   python -m regime_trader live           paper trading loop (live needs typed phrase)
   python -m regime_trader dashboard      live terminal dashboard
+  python -m regime_trader research-eth   ETH/USD systematic research: sweep -> validate -> decide
   python -m regime_trader omni-deploy    §13 omnivore cohort cycle (paper)
   python -m regime_trader omni-report    cohort leaderboard from the ledger
   python -m regime_trader omni-prune     retire losing cohort members
   python -m regime_trader broker-check   Alpaca round-trip: bracket -> tighten -> cancel
   python -m regime_trader release-lock   manually release the hard drawdown lock
+  python -m regime_trader govern-daily   governed daily cycle: research -> validate -> decide -> report
+  python -m regime_trader govern-validate  independent validation pipeline for one strategy
+  python -m regime_trader govern-optimize  optimization-team proposals (ad hoc)
+  python -m regime_trader govern-report  show the latest (or dated) governance report
+  python -m regime_trader notion-sync    mirror a governance run's reports into Notion
 """
 from __future__ import annotations
 
@@ -268,6 +274,46 @@ def cmd_omni_prune(args):
     console.print(f"retired: {retired or 'none'}")
 
 
+def cmd_omni_reconcile(args):
+    _setup()
+    from .omnivore.deploy import OmnivoreDeployer
+
+    dep = OmnivoreDeployer(dry_run=True)  # ledger-only; no broker, no orders
+    fixed = dep.reconcile_enabled()
+    if not fixed:
+        console.print("nothing to reconcile — every disabled strategy has a real trading record")
+        return
+    if args.dry_run:
+        console.print(f"[yellow]would re-enable {len(fixed)} never-traded strategies[/yellow]: "
+                      f"{', '.join(fixed)}")
+    else:
+        dep.save()
+        console.print(f"[green]re-enabled {len(fixed)} never-traded strategies[/green]: "
+                      f"{', '.join(fixed)}")
+
+
+def cmd_warm_oracle(args):
+    """Pre-compute & cache the HMM regime oracle for the interactive backtest's
+    default views, so the first dashboard backtest of the day doesn't pay the
+    ~25-30s refit. The oracle is shared across all strategies/params for a span."""
+    _setup()
+    from datetime import datetime, timezone
+
+    from .backtest.oracle import compute_regime_oracle
+    from .data.provider import DataProvider
+
+    today = datetime.now(timezone.utc).date().isoformat()
+    symbols = args.symbols or ["ETH/USD", "BTC/USD"]
+    dp = DataProvider(allow_network=False)
+    for symbol in symbols:
+        try:
+            df = dp.get_bars(symbol, start="2021-01-01", end=today, timeframe="1Day")
+            oracle = compute_regime_oracle(df)
+            console.print(f"[green]warmed[/green] {symbol} 1Day — {len(oracle)} oracle bars")
+        except Exception as exc:  # noqa: BLE001 — best-effort warm, never fatal
+            console.print(f"[yellow]warm failed[/yellow] {symbol}: {exc}")
+
+
 def cmd_broker_check(args):
     _setup()
     from .broker.alpaca import AlpacaBroker
@@ -308,6 +354,115 @@ def cmd_release_lock(args):
 
     released = RiskManager().manual_release()
     console.print("[green]lock released[/green]" if released else "no lock was engaged")
+
+
+def cmd_govern_daily(args):
+    _setup()
+    from .broker.alpaca import AlpacaBroker
+    from .govern.daily import DailyGovernanceCycle
+
+    broker = None
+    if not args.no_trade:
+        try:
+            broker = AlpacaBroker(paper=True)
+            broker.health_check()
+        except Exception as exc:
+            console.print(f"[yellow]broker unavailable ({exc}); continuing research-only[/yellow]")
+            broker = None
+    cycle = DailyGovernanceCycle(broker=broker, deep=args.deep, no_trade=args.no_trade)
+    summary = cycle.run()
+    console.print_json(json.dumps(summary, indent=2, default=str))
+
+
+def cmd_agents_supervisor(args):
+    _setup()
+    from .agents.supervisor import Supervisor
+
+    Supervisor.from_config().run()
+
+
+def cmd_research_eth(args):
+    _setup()
+    from .research.eth_research import run_research
+
+    summary = run_research(deep=args.deep)
+    d = summary["decision"]
+    console.print_json(json.dumps(d, indent=2, default=str))
+    color = "green" if d.get("verdict") == "SELECTED" else "yellow"
+    console.print(f"[{color}]decision: {d.get('verdict')}[/{color}]  "
+                  f"(artifacts in {get_config().research.out_dir})")
+
+
+def cmd_govern_validate(args):
+    _setup()
+    from .govern import validation
+    from .govern.registry import GovernanceRegistry
+
+    bars = _load_bars(refresh=args.refresh)
+    oracle = _oracle(bars, use_cache=not args.refresh)
+    registry = GovernanceRegistry()
+    governed = {gs.key: gs for gs in registry.universe}
+    gs = governed.get(args.strategy)
+    if gs is None:
+        console.print(f"[red]unknown strategy[/red] — choose from: {', '.join(sorted(governed))}")
+        sys.exit(1)
+    rep = validation.validate(gs.strategy, bars, oracle, gs.symbols, deep=args.deep,
+                              prior_sharpe=registry.prior_sharpe(gs.key))
+    console.print_json(json.dumps(rep.__dict__, indent=2, default=str))
+    color = "green" if rep.passed else "red"
+    console.print(f"[{color}]verdict: {rep.verdict}[/{color}]")
+    if not rep.passed:
+        sys.exit(2)
+
+
+def cmd_govern_optimize(args):
+    _setup()
+    from .govern import optimization
+    from .govern.registry import GovernanceRegistry
+
+    bars = _load_bars(refresh=args.refresh)
+    oracle = _oracle(bars, use_cache=not args.refresh)
+    registry = GovernanceRegistry()
+    only = {args.strategy} if args.strategy else None
+    proposals = optimization.run_optimization(registry.universe, bars, oracle, deep=True, only_keys=only)
+    if not proposals:
+        console.print("[dim]no improving proposals found[/dim]")
+        return
+    for prop in proposals.values():
+        console.print_json(json.dumps({
+            "key": prop.key, "base_sharpe": prop.base_sharpe,
+            "proposed_sharpe": prop.proposed_sharpe, "changes": prop.changes,
+            "improves": prop.improves,
+        }, indent=2, default=str))
+
+
+def cmd_govern_report(args):
+    cfg = _setup()
+    date = args.date or utc_now().strftime("%Y-%m-%d")
+    outdir = cfg.resolve_path(cfg.runs_dir) / "governance" / date
+    summary_file = outdir / "summary.md"
+    if not summary_file.exists():
+        console.print(f"[red]no report found for {date}[/red] (looked in {outdir})")
+        sys.exit(1)
+    console.print(summary_file.read_text())
+    leaderboard = outdir / "master_leaderboard.md"
+    if leaderboard.exists():
+        console.print(leaderboard.read_text())
+
+
+def cmd_notion_sync(args):
+    _setup()
+    from .web import notion_publisher
+
+    date = args.date or utc_now().strftime("%Y-%m-%d")
+    result = notion_publisher.sync_run(date)
+    console.print_json(json.dumps(result, indent=2, default=str))
+    if result["status"] == "ok":
+        console.print(f"[green]notion-sync: mirrored {date}[/green]")
+    elif result["status"] == "skipped":
+        console.print(f"[dim]notion-sync: skipped ({result.get('reason')})[/dim]")
+    else:
+        console.print(f"[yellow]notion-sync: error ({result.get('error')})[/yellow]")
 
 
 # ---------------------------------------------------------------- parser
@@ -357,11 +512,53 @@ def build_parser() -> argparse.ArgumentParser:
     op.add_argument("--min-obs", type=int, default=20)
     op.set_defaults(func=cmd_omni_prune)
 
+    orc = sub.add_parser("omni-reconcile")
+    orc.add_argument("--dry-run", action="store_true", help="preview without writing the ledger")
+    orc.set_defaults(func=cmd_omni_reconcile)
+
+    wo = sub.add_parser("warm-oracle")
+    wo.add_argument("--symbols", nargs="*", default=None,
+                    help="symbols to warm (default: ETH/USD BTC/USD)")
+    wo.set_defaults(func=cmd_warm_oracle)
+
     bc = sub.add_parser("broker-check")
     bc.add_argument("--round-trip", action="store_true", help="submit/modify/cancel a paper bracket")
     bc.set_defaults(func=cmd_broker_check)
 
     sub.add_parser("release-lock").set_defaults(func=cmd_release_lock)
+
+    gd = sub.add_parser("govern-daily")
+    gd.add_argument("--deep", action="store_true", default=None,
+                    help="force deep validation (default: auto by weekday)")
+    gd.add_argument("--no-trade", action="store_true", help="research/report only, no paper orders")
+    gd.set_defaults(func=cmd_govern_daily)
+
+    sub.add_parser("agents-supervisor",
+                   help="always-on Gemini agent supervisor (paper only; run under systemd)"
+                   ).set_defaults(func=cmd_agents_supervisor)
+
+    re_ = sub.add_parser("research-eth")
+    re_.add_argument("--deep", action="store_true", help="full 4h grid + 10k Monte-Carlo sims")
+    re_.set_defaults(func=cmd_research_eth)
+
+    gv = sub.add_parser("govern-validate")
+    gv.add_argument("--strategy", required=True)
+    gv.add_argument("--deep", action="store_true")
+    gv.add_argument("--refresh", action="store_true")
+    gv.set_defaults(func=cmd_govern_validate)
+
+    go = sub.add_parser("govern-optimize")
+    go.add_argument("--strategy", default=None, help="limit to one strategy key (default: whole universe)")
+    go.add_argument("--refresh", action="store_true")
+    go.set_defaults(func=cmd_govern_optimize)
+
+    gr = sub.add_parser("govern-report")
+    gr.add_argument("--date", default=None, help="YYYY-MM-DD (default: today)")
+    gr.set_defaults(func=cmd_govern_report)
+
+    ns = sub.add_parser("notion-sync")
+    ns.add_argument("--date", default=None, help="YYYY-MM-DD (default: today)")
+    ns.set_defaults(func=cmd_notion_sync)
     return p
 
 

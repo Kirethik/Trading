@@ -1,0 +1,19 @@
+{
+  "name": "regime-gated",
+  "total_return": 0.2746209692847461,
+  "cagr": 0.036857025635960605,
+  "sharpe": 1.0170177159340876,
+  "sortino": 1.0502207351455601,
+  "calmar": 0.7115746409936379,
+  "max_drawdown": -0.051796429373162756,
+  "max_drawdown_duration_bars": 833,
+  "recovery_factor": 5.3019285809503165,
+  "ann_vol": 0.03623487184084669,
+  "bars": 2448,
+  "win_rate": 0.48148148148148145,
+  "profit_factor": 2.2042406920644613,
+  "n_round_trips": 81,
+  "avg_trade": 339.0382336848733,
+  "n_fills": 467,
+  "avg_gross_exposure": 0.07131661105173386
+}

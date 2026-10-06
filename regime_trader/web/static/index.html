@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Regime-Trader</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+</head>
+<body>
+  <div id="login-screen">
+    <form class="login-box" id="login-form">
+      <h1 id="login-title">Regime-Trader</h1>
+      <p class="muted">Sign in to view the dashboard</p>
+      <input type="password" id="login-password" placeholder="Password" autocomplete="current-password" required />
+      <button type="submit">Log in</button>
+      <div class="login-error" id="login-error"></div>
+    </form>
+  </div>
+
+  <div id="app">
+    <header class="topbar">
+      <h1 id="app-title">Regime-Trader</h1>
+      <span class="badge neutral" id="breaker-badge">breaker: —</span>
+      <span class="badge neutral" id="live-badge">live: —</span>
+      <span class="muted" id="portfolio-updated"></span>
+      <div class="spacer"></div>
+      <label class="muted" for="date-select">date</label>
+      <select id="date-select"></select>
+      <button id="logout-btn" type="button">Log out</button>
+    </header>
+
+    <nav class="tabs">
+      <button data-tab="overview" class="active" type="button">Overview</button>
+      <button data-tab="portfolio" type="button">Portfolio</button>
+      <button data-tab="watchlist" type="button">Watchlist</button>
+      <button data-tab="leaderboard" type="button">Leaderboard</button>
+      <button data-tab="strategies" type="button">Strategies</button>
+      <button data-tab="decisions" type="button">Decisions</button>
+      <button data-tab="omnivore" type="button">Omnivore</button>
+      <button data-tab="controls" type="button">Controls</button>
+      <button data-tab="logs" type="button">Logs</button>
+    </nav>
+
+    <main>
+      <section class="tab-panel active" id="tab-overview">
+        <h3 class="section-title">Live portfolio</h3>
+        <div class="cards" id="portfolio-cards"></div>
+        <div class="panel">
+          <h3>Positions <span class="muted">— live prices, value into consideration</span></h3>
+          <table id="positions-table">
+            <thead></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <h3 class="section-title">Governance</h3>
+        <div class="cards" id="overview-cards"></div>
+        <div class="charts-grid">
+          <div class="chart-box"><div class="chart" id="chart-status"></div></div>
+          <div class="chart-box"><div class="chart" id="chart-decisions"></div></div>
+          <div class="chart-box"><div class="chart" id="chart-verdicts"></div></div>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="tab-portfolio">
+        <h3 class="section-title">Capital &amp; performance</h3>
+        <div class="cards" id="pf-cards"></div>
+        <div class="charts-grid">
+          <div class="chart-box"><div class="chart" id="chart-pf-alloc"></div></div>
+          <div class="chart-box"><div class="chart" id="chart-pf-pnl"></div></div>
+        </div>
+        <div class="panel">
+          <h3>Executed trades <span class="muted" id="pf-trades-note">— order pipeline from the trades log</span></h3>
+          <table id="pf-trades-table">
+            <thead></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="tab-watchlist">
+        <h3 class="section-title">Stocks in consideration <span class="muted" id="wl-note"></span></h3>
+        <div class="panel">
+          <h3>Universe <span class="muted">— watched symbols, ● = currently held</span></h3>
+          <table id="wl-symbols-table">
+            <thead></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div class="panel">
+          <h3>Strategies under consideration <span class="muted">— governance registry</span></h3>
+          <table id="wl-strategies-table">
+            <thead></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <h3 class="section-title">What's being learnt</h3>
+        <div class="cards" id="learn-cards"></div>
+        <div class="charts-grid">
+          <div class="chart-box"><div class="chart" id="chart-regime-bic"></div></div>
+          <div class="chart-box"><div class="chart" id="chart-risk-reasons"></div></div>
+        </div>
+        <div class="panel">
+          <h3>Strategy notes <span class="muted">— latest governance rationale</span></h3>
+          <table id="learn-insights-table">
+            <thead></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="tab-leaderboard">
+        <div class="charts-grid">
+          <div class="chart-box"><div class="chart" id="chart-lb-sharpe"></div></div>
+          <div class="chart-box"><div class="chart" id="chart-lb-scatter"></div></div>
+          <div class="chart-box"><div class="chart" id="chart-lb-ruin"></div></div>
+        </div>
+        <div class="panel">
+          <table id="lb-table">
+            <thead></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="tab-strategies">
+        <div class="row" style="margin-bottom: 12px;">
+          <label class="muted" for="strategy-select">strategy</label>
+          <select id="strategy-select" class="select-strategy"></select>
+        </div>
+        <div id="strategy-detail"></div>
+      </section>
+
+      <section class="tab-panel" id="tab-decisions">
+        <div class="charts-grid">
+          <div class="chart-box"><div class="chart" id="chart-decision-mix"></div></div>
+        </div>
+        <div class="panel">
+          <table id="decisions-table">
+            <thead></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="tab-omnivore">
+        <div class="charts-grid">
+          <div class="chart-box"><div class="chart" id="chart-omni-equity"></div></div>
+        </div>
+        <div class="panel">
+          <table id="omni-table">
+            <thead></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="tab-controls">
+        <div class="controls-grid" id="controls-grid"></div>
+        <div class="panel">
+          <h3>Jobs</h3>
+          <table id="jobs-table">
+            <thead></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div class="panel">
+          <h3>Job log <span class="muted" id="job-log-label"></span></h3>
+          <pre class="log" id="job-log">(click a job row to view its log)</pre>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="tab-logs">
+        <div class="row" style="margin-bottom: 12px;">
+          <label class="muted" for="log-channel">channel</label>
+          <select id="log-channel">
+            <option value="governance">governance</option>
+            <option value="governance-run">governance-run (latest cron)</option>
+            <option value="main">main</option>
+            <option value="trades">trades</option>
+            <option value="alerts">alerts</option>
+            <option value="regime">regime</option>
+          </select>
+          <label class="muted" for="log-lines">lines</label>
+          <input type="number" id="log-lines" value="200" min="10" max="2000" style="width: 90px;" />
+          <button id="log-refresh" type="button">Refresh</button>
+        </div>
+        <pre class="log" id="log-view"></pre>
+      </section>
+    </main>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

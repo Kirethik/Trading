@@ -1,0 +1,19 @@
+[Unit]
+Description=Regime-Trader Omnivore live paper-trading loop
+After=network.target regime-dashboard.service
+
+[Service]
+Type=simple
+User=ec2-user
+Group=ec2-user
+WorkingDirectory=/home/ec2-user/regime-trader
+EnvironmentFile=-/home/ec2-user/regime-trader/.env
+# Paper account only (AlpacaBroker(paper=True)); every order still clears the
+# RiskManager veto + breaker.lock. 60-min cadence: crypto trades 24/7, stocks
+# self-gate (off-hours bars don't move so no orders fire).
+ExecStart=/home/ec2-user/regime-trader/venv/bin/python -m regime_trader omni-deploy --orders --loop --interval 60
+Restart=on-failure
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target

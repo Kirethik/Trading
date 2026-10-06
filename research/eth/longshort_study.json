@@ -1,0 +1,85 @@
+{
+  "cost_bps_per_side": 20.0,
+  "signal": "price vs 100-bar SMA (canonical trend)",
+  "variants": {
+    "long_only_spot": {
+      "metrics": {
+        "cagr": 0.33,
+        "sharpe": 0.779,
+        "calmar": 0.438,
+        "max_drawdown": -0.754,
+        "recovery_factor": 15.141
+      },
+      "per_cycle": {
+        "2018-bear": {
+          "cagr": -0.121,
+          "sharpe": 0.099,
+          "max_drawdown": -0.521
+        },
+        "2021-bull": {
+          "cagr": 1.65,
+          "sharpe": 1.484,
+          "max_drawdown": -0.612
+        },
+        "2022-bear": {
+          "cagr": -0.469,
+          "sharpe": -1.464,
+          "max_drawdown": -0.529
+        },
+        "2023-26": {
+          "cagr": 0.212,
+          "sharpe": 0.656,
+          "max_drawdown": -0.471
+        }
+      }
+    },
+    "long_short_perp_funded": {
+      "metrics": {
+        "cagr": -0.087,
+        "sharpe": 0.341,
+        "calmar": -0.092,
+        "max_drawdown": -0.953,
+        "recovery_factor": -0.581
+      },
+      "per_cycle": {
+        "2018-bear": {
+          "cagr": 0.933,
+          "sharpe": 1.151,
+          "max_drawdown": -0.654
+        },
+        "2021-bull": {
+          "cagr": -0.205,
+          "sharpe": 0.341,
+          "max_drawdown": -0.821
+        },
+        "2022-bear": {
+          "cagr": -0.505,
+          "sharpe": -0.37,
+          "max_drawdown": -0.748
+        },
+        "2023-26": {
+          "cagr": 0.005,
+          "sharpe": 0.329,
+          "max_drawdown": -0.704
+        }
+      }
+    },
+    "long_short_perp_nofunding": {
+      "metrics": {
+        "cagr": -0.01,
+        "sharpe": 0.435,
+        "calmar": -0.01,
+        "max_drawdown": -0.943,
+        "recovery_factor": -0.088
+      }
+    }
+  },
+  "funding_signal": {
+    "corr_funding_vs_fwd_ret": 0.0378,
+    "mean_fwd_ret_high_funding": 0.00402,
+    "mean_fwd_ret_low_funding": 0.00313,
+    "avg_daily_funding_rate": 0.000389,
+    "annualized_funding_drag_for_perp_long": 0.1419,
+    "funding_history_days": 2393
+  }
+}
