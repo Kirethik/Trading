@@ -15,6 +15,7 @@ from pathlib import Path
 
 from ..agents import specs
 from ..agents.audit import AuditLog
+from ..utils import load_json
 from . import data
 
 ACTIVE_HOURS = 24
@@ -120,6 +121,9 @@ def humanize(row: dict) -> dict:
         return {"when": when, "tone": "neutral",
                 "headline": f"Suggested {len(out['candidates'])} new settings to try for {subject}",
                 "detail": str(out.get("rationale", ""))}
+    if "headline" in out:
+        return {"when": when, "tone": "neutral", "headline": f"Explained a problem: {out['headline']}",
+                "detail": str(out.get("explanation", ""))}
     if "lessons" in out:
         return {"when": when, "tone": "good",
                 "headline": f"Looked back at past calls and wrote {len(out['lessons'])} lessons",
@@ -148,6 +152,36 @@ def _debate(post: dict) -> dict:
 def _lessons(name: str, limit: int = 30) -> list[dict]:
     return [{"when": p["ts"], "lesson": str(p.get("lesson", "")), "evidence": str(p.get("evidence", "")),
              "confidence": p.get("confidence", "low")} for p in reversed(_posts(f"lessons:{name}", limit))]
+
+
+# ---------------------------------------------------------------- watchman
+_SEVERITY_TONE = {"critical": "bad", "warn": "neutral", "info": "good"}
+
+
+def _watch_log(limit: int = 60) -> list[dict]:
+    return [{"when": p["ts"], "severity": p.get("severity", "warn"),
+             "tone": _SEVERITY_TONE.get(p.get("severity", "warn"), "neutral"),
+             "status": p.get("status"), "headline": str(p.get("headline") or p.get("title") or ""),
+             "explanation": str(p.get("explanation") or p.get("detail") or ""),
+             "suggestion": str(p.get("suggestion") or ""), "actions": [str(a) for a in p.get("actions") or []]}
+            for p in reversed(_posts("watch", limit))]
+
+
+def watch_status() -> dict:
+    """Current health from the Watchman's own state file + any agent pause."""
+    cfg = data._cfg()
+    state = load_json(cfg.resolve_path(cfg.state_dir) / "watchman.json", default=None) or {}
+    pause = load_json(data._agent_path("pause_file"), default=None)
+    active = [{"code": k, "severity": v.get("severity"), "title": v.get("title"), "since": v.get("first_seen")}
+              for k, v in (state.get("active") or {}).items()
+              if v.get("alerted", True) and not v.get("clear")]   # confirmed, still present
+    paused_until = None
+    if isinstance(pause, dict) and (t := _parse_ts(pause.get("until"))) and t > datetime.now(timezone.utc):
+        paused_until = pause.get("until")
+    return {"status": "not started" if not state else ("issues" if active else "all clear"),
+            "last_check": state.get("last_tick"), "issues": active,
+            "agents_paused_until": paused_until,
+            "pause_reason": pause.get("reason") if paused_until else None}
 
 
 # ------------------------------------------------------------------- stats
@@ -204,7 +238,7 @@ def team() -> dict:
         last = next((humanize(r) for r in reversed(rows) if r.get("agent") == spec.name), None)
         agents.append({**_persona(spec), "stats": _stats(rows, spec.name, activity["kill_switch"]),
                        "latest": last})
-    return {"as_of": activity["as_of"], "agents": agents,
+    return {"as_of": activity["as_of"], "agents": agents, "watch": watch_status(),
             "latest_debate": _debate(debates[-1]) if debates else None,
             "team": {k: activity[k] for k in ("budget", "supervisor", "kill_switch", "sleeve")}}
 
@@ -216,7 +250,8 @@ def profile(name: str) -> dict | None:
     rows = _audit_rows()
     kill = data.load_agent_activity(limit=1)["kill_switch"]
     diary = [humanize(r) for r in reversed(rows) if r.get("agent") == name][:100]
-    return {**_persona(spec), "stats": _stats(rows, name, kill), "looked_at": _looked_at(rows, name),
+    extra = {"watch": watch_status(), "watch_log": _watch_log()} if name == "watchman" else {}
+    return {**_persona(spec), **extra, "stats": _stats(rows, name, kill), "looked_at": _looked_at(rows, name),
             "diary": diary, "lessons": _lessons(name),
             "debates": [_debate(p) for p in reversed(_posts("debate", 20)) if _took_part(name, p)]}
 
@@ -227,4 +262,4 @@ def _took_part(name: str, post: dict) -> bool:
         return bool(post.get("advocate"))
     if name == "validation":
         return bool(post.get("skeptic"))
-    return True
+    return name == "governance"   # the Watchman never debates

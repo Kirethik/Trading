@@ -376,9 +376,16 @@ def cmd_govern_daily(args):
 
 def cmd_agents_supervisor(args):
     _setup()
-    from .agents.supervisor import Supervisor
+    from .agents import watchman
+    from .agents.supervisor import Job, Supervisor
+    from .config import get_config
 
-    Supervisor.from_config().run()
+    sup = Supervisor.from_config()
+    wm = watchman.from_config()
+    if wm is not None:
+        interval = float(get_config().agents.watchman.get("interval_seconds", 300))
+        sup.register(Job("watchman", interval, wm.tick))
+    sup.run()
 
 
 def cmd_research_eth(args):

@@ -229,10 +229,30 @@ export interface Debate {
   verdict: { decision: string | null; words: string; tone: Tone; rationale: string };
 }
 
+export interface WatchStatus {
+  status: "all clear" | "issues" | "not started";
+  last_check: string | null;
+  issues: { code: string; severity: string; title: string; since: string | null }[];
+  agents_paused_until: string | null;
+  pause_reason: string | null;
+}
+
+export interface WatchEvent {
+  when: string;
+  severity: "critical" | "warn" | "info";
+  tone: Tone;
+  status: "new" | "ongoing" | "resolved" | null;
+  headline: string;
+  explanation: string;
+  suggestion: string;
+  actions: string[];
+}
+
 export interface AgentTeamPayload {
   as_of: string;
   agents: (AgentPersona & { stats: AgentStats; latest: DiaryItem | null })[];
   latest_debate: Debate | null;
+  watch: WatchStatus;
   team: Pick<AgentActivityPayload, "budget" | "supervisor" | "kill_switch" | "sleeve">;
 }
 
@@ -242,6 +262,8 @@ export interface AgentProfilePayload extends AgentPersona {
   diary: DiaryItem[];
   lessons: AgentLesson[];
   debates: Debate[];
+  watch?: WatchStatus;
+  watch_log?: WatchEvent[];
 }
 
 // ---------------------------------------------------- live portfolio / ops

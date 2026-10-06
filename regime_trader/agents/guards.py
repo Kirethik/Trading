@@ -6,12 +6,14 @@ is always blocked (fail closed).
 """
 from __future__ import annotations
 
+from datetime import datetime, timedelta
 from enum import IntEnum
 from pathlib import Path
 from typing import Any, Callable
 
 from ..config import get_config
 from ..monitor.log_setup import get_logger
+from ..utils import atomic_write_json, load_json, utc_now
 
 log = get_logger("agents")
 
@@ -67,6 +69,34 @@ def make_tool_guard(agent_tier: ToolTier, allowlist: set[str]) -> Callable[..., 
         return _blocked(reason)
 
     return guard
+
+
+def _pause_path() -> Path:
+    cfg = get_config()
+    rel = cfg.agents.get("pause_file") or "state/agents.paused"
+    return cfg.resolve_path(rel)
+
+
+def agents_paused(path: str | Path | None = None) -> dict | None:
+    """The Watchman's temporary pause (expires on its own), or None. Unlike the
+    human kill switch it only stops agent *buying* and governance escalations;
+    risk-reducing sells and the Watchman itself keep working."""
+    info = load_json(Path(path) if path else _pause_path(), default=None)
+    if not isinstance(info, dict):
+        return None
+    try:
+        until = datetime.fromisoformat(str(info.get("until")))
+    except ValueError:
+        return None
+    return info if until > utc_now() else None
+
+
+def pause_agents(hours: float, reason: str, path: str | Path | None = None) -> dict:
+    info = {"until": (utc_now() + timedelta(hours=hours)).isoformat(timespec="seconds"),
+            "reason": reason[:300], "by": "watchman", "since": utc_now().isoformat(timespec="seconds")}
+    atomic_write_json(Path(path) if path else _pause_path(), info)
+    log.warning("agents paused until %s: %s", info["until"], reason)
+    return info
 
 
 def kill_switch_engaged(path: str | Path | None = None) -> bool:

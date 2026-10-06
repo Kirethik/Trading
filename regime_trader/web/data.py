@@ -585,7 +585,7 @@ def tail_log(name: str, n: int = 200) -> dict:
 _AGENT_DEFAULTS = {
     "audit_file": "agent_audit.jsonl", "budget_file": "agent_budget.json",
     "kill_switch_file": "agents.disabled", "heartbeat_file": "agent_supervisor.json",
-    "ledger_file": "agent_ledger.json",
+    "ledger_file": "agent_ledger.json", "pause_file": "agents.paused",
 }
 
 

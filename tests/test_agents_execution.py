@@ -44,6 +44,7 @@ class FakeBroker:
 def setup(tmp_path, monkeypatch):
     monkeypatch.setenv("ALPACA_PAPER", "true")
     monkeypatch.setattr(guards, "kill_switch_engaged", lambda path=None: False)
+    monkeypatch.setattr(guards, "agents_paused", lambda path=None: None)
     bars = make_synthetic_bars(n=300)
     broker = FakeBroker()
     events: list = []
@@ -197,3 +198,47 @@ def test_signal_ids_are_short_and_weight_specific():
 
 def test_alert_text_is_sanitized():
     assert execution._safe("buy @everyone see https://evil.x <b>now</b>") == "buy everyone see  bnow/b"
+
+
+def test_watchman_pause_blocks_buys_but_allows_sells(setup, monkeypatch):
+    setup.ex.place("AAPL", "buy", 0.10, "in", signal_id="b")
+    monkeypatch.setattr(guards, "agents_paused", lambda path=None: {"reason": "watchman"})
+    assert setup.ex.place("MSFT", "buy", 0.10, "x", signal_id="b2")["status"] == "blocked"
+    assert setup.ex.place("AAPL", "sell", 0.0, "derisk", signal_id="s")["status"] == "submitted"
+
+
+def test_trim_all_sells_a_fraction_once_per_tag(setup):
+    setup.ex.place("AAPL", "buy", 0.10, "in", signal_id="b")
+    held = setup.ex.ledger()["positions"]["AAPL"]["qty"]
+    first = setup.ex.trim_all(0.5, "protect", tag="day-x")
+    again = setup.ex.trim_all(0.5, "protect", tag="day-x")
+    assert first[0]["status"] == "submitted"
+    assert setup.ex.ledger()["positions"]["AAPL"]["qty"] < held
+    assert again[0]["status"] in ("submitted", "noop", "duplicate")
+
+
+def test_sleeve_drawdown_never_writes_the_main_hard_lock(tmp_path, monkeypatch):
+    """F1: the agents' RiskManager uses its own lock file."""
+    monkeypatch.setenv("ALPACA_PAPER", "true")
+    from regime_trader.config import get_config
+    ex = execution.executor_from_config("t", FakeBroker())
+    cfg = get_config()
+    assert ex.risk.lock_file != cfg.resolve_path(cfg.risk.lock_file)
+    assert ex.main_lock == cfg.resolve_path(cfg.risk.lock_file)
+
+
+def test_main_hard_lock_blocks_agent_buys_but_not_sells(setup):
+    setup.ex.place("AAPL", "buy", 0.10, "in", signal_id="b")
+    setup.ex.main_lock = setup.tmp / "main.lock"
+    setup.ex.main_lock.write_text("locked")
+    assert setup.ex.place("MSFT", "buy", 0.1, "x", signal_id="b2")["status"] == "blocked"
+    assert setup.ex.place("AAPL", "sell", 0.0, "out", signal_id="s")["status"] == "submitted"
+    assert setup.ex.main_lock.read_text() == "locked"
+
+
+def test_trim_is_one_per_tag_and_symbol(setup):
+    setup.ex.place("AAPL", "buy", 0.10, "in", signal_id="b")
+    setup.ex.trim_all(0.5, "protect", tag="day-x")
+    held = setup.ex.ledger()["positions"]["AAPL"]["qty"]
+    again = setup.ex.trim_all(0.5, "protect", tag="day-x")
+    assert again[0]["status"] == "duplicate" and setup.ex.ledger()["positions"]["AAPL"]["qty"] == held

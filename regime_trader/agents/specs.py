@@ -71,6 +71,17 @@ _SPECS: dict[str, AgentSpec] = {
             about="The Skeptic hunts for warning signs: results that might be luck, too few "
                   "trades, or a strategy that only works in one kind of market. It is "
                   "deliberately hard to convince — that is what keeps the system safe."),
+        AgentSpec(
+            "watchman", "live-oversight", "Live oversight Watchman (explains, never decides)",
+            "flash", display_name="The Watchman", icon="🛡️", color="#0EA5E9",
+            title="Watches the live system around the clock and steps in when something goes wrong",
+            voice="I keep an eye on everything while it runs, and I tell you the moment something looks off.",
+            about="Every few minutes the Watchman checks the whole practice account: sudden losses, "
+                  "too much money invested at once, records that don't match the broker, a trading "
+                  "loop that went quiet, and the safety brakes. When something is serious it acts "
+                  "on its own — it pauses the other agents' buying and trims their positions — "
+                  "and always tells you what it did. It never touches the main system's trades "
+                  "and never loosens a safety limit."),
     )
 }
 

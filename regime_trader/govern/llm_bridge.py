@@ -32,6 +32,9 @@ def available() -> bool:
     if guards.kill_switch_engaged():
         log.warning("agent kill switch engaged; governance runs deterministic-only")
         return False
+    if guards.agents_paused():
+        log.warning("agents paused by the Watchman; governance runs deterministic-only")
+        return False
     return True
 
 

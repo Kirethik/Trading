@@ -40,7 +40,8 @@ class PaperExecutor:
     def __init__(self, agent: str, broker, risk: RiskManager,
                  get_bars: Callable[[str], pd.DataFrame | None], ledger_path: str | Path,
                  max_sleeve_pct: float, max_orders_per_day: int,
-                 on_event: Callable[[dict], None] | None = None):
+                 on_event: Callable[[dict], None] | None = None,
+                 main_lock: str | Path | None = None):
         self.agent = agent
         self.broker = broker
         self.risk = risk
@@ -49,6 +50,7 @@ class PaperExecutor:
         self.max_sleeve_pct = float(max_sleeve_pct)
         self.max_orders_per_day = int(max_orders_per_day)
         self.on_event = on_event or (lambda e: None)
+        self.main_lock = main_lock   # the main system's hard lock: honored, never written
         cfg = get_config()
         self.allowed_symbols = frozenset(cfg.universe.sectors.as_dict())
         self.threshold = float(cfg.allocation.rebalance_threshold)
@@ -95,6 +97,10 @@ class PaperExecutor:
                 "target_weight": target_weight, "signal_id": signal_id, "rationale": rationale[:500]}
         if guards.kill_switch_engaged():
             return self._emit(base, "blocked", "agent kill switch engaged")
+        if side == "buy" and guards.agents_paused():
+            return self._emit(base, "blocked", "agent buying paused by the Watchman")
+        if side == "buy" and self.main_lock is not None and Path(self.main_lock).exists():
+            return self._emit(base, "blocked", "the main system's emergency stop is on")
         problem = self._validate(symbol, side, target_weight)
         if problem:
             return self._emit(base, "invalid", problem)
@@ -139,6 +145,24 @@ class PaperExecutor:
             status, reason = "noop", "broker returned no order"
         self._save(led)
         return self._emit(base, status, reason)
+
+    def trim_all(self, fraction: float, rationale: str, tag: str) -> list[dict]:
+        """Sell `fraction` of every agent-sleeve holding (risk-reducing only).
+        Idempotent per `tag`, so a persisting problem trims once per tag."""
+        led = self.ledger()
+        if not led["positions"]:
+            return []
+        prices = {s: self._mark(s, pos) for s, pos in led["positions"].items()}
+        cash = led["cash"] if led["cash"] is not None else 0.0
+        equity = cash + sum(pos["qty"] * prices[s] for s, pos in led["positions"].items())
+        if equity <= 0:
+            return []
+        out = []
+        for sym, pos in led["positions"].items():
+            weight = pos["qty"] * prices[sym] / equity
+            sid = signal_id_for(self.agent, f"trim|{tag}", sym, "sell", 0.0)
+            out.append({"symbol": sym, **self.place(sym, "sell", weight * (1 - fraction), rationale, sid)})
+        return out
 
     # ----------------------------------------------------------- helpers
     def _validate(self, symbol: str, side: str, w: float) -> str | None:
@@ -273,8 +297,10 @@ def executor_from_config(agent: str, broker, on_event: Callable[[dict], None] | 
     cfg = get_config()
     ex = cfg.agents.execution
     provider = DataProvider()
+    sleeve_lock = cfg.resolve_path(ex.get("lock_file") or "state/agent_sleeve.lock")
     return PaperExecutor(
-        agent=agent, broker=broker, risk=RiskManager(),
+        agent=agent, broker=broker, risk=RiskManager(lock_file=sleeve_lock),
+        main_lock=cfg.resolve_path(cfg.risk.lock_file),
         get_bars=lambda s: provider.get_bars(s, timeframe=cfg.data.timeframe, refresh=True),
         ledger_path=cfg.resolve_path(ex.ledger_file),
         max_sleeve_pct=ex.max_sleeve_pct, max_orders_per_day=ex.max_orders_per_day,

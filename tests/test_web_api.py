@@ -636,7 +636,7 @@ def test_agents_team_requires_auth(client):
 def test_agents_team_lists_three_personas_without_data(client):
     _login(client)
     body = client.get("/api/agents").json()
-    assert [a["display_name"] for a in body["agents"]] == ["The Judge", "The Tuner", "The Skeptic"]
+    assert [a["display_name"] for a in body["agents"]] == ["The Judge", "The Tuner", "The Skeptic", "The Watchman"]
     assert all(a["stats"]["status"] == "not started" for a in body["agents"])
     assert body["latest_debate"] is None
 
@@ -674,3 +674,23 @@ def test_agent_pages_show_only_debates_the_agent_joined(client, web_env):
     judge = [d["strategy"] for d in client.get("/api/agents/governance").json()["debates"]]
     skeptic = [d["strategy"] for d in client.get("/api/agents/validation").json()["debates"]]
     assert judge == ["solo", "tsmom-eth"] and skeptic == ["tsmom-eth"]
+
+
+def test_watchman_profile_shows_status_pause_and_watch_log(client, web_env):
+    from datetime import datetime, timedelta, timezone
+    from regime_trader.agents.blackboard import Blackboard
+    state = web_env / "state"
+    (state / "watchman.json").write_text(json.dumps({"last_tick": "2026-10-06T10:00:00+00:00", "active": {
+        "combined_exposure": {"severity": "critical", "title": "Too much invested", "first_seen": "x"}}}))
+    until = (datetime.now(timezone.utc) + timedelta(hours=2)).isoformat()
+    (state / "agents.paused").write_text(json.dumps({"until": until, "reason": "Watchman: Too much invested"}))
+    Blackboard(state / "agents.db").post("watch", "watchman", {
+        "code": "combined_exposure", "severity": "critical", "status": "new", "headline": "Too much invested",
+        "explanation": "E", "suggestion": "S", "actions": ["Paused the other agents' buying for 4 hours"]})
+    _login(client)
+    team = client.get("/api/agents").json()
+    assert team["watch"]["status"] == "issues" and team["watch"]["agents_paused_until"] == until
+    p = client.get("/api/agents/watchman").json()
+    assert p["display_name"] == "The Watchman"
+    assert p["watch_log"][0]["tone"] == "bad" and p["watch_log"][0]["actions"]
+    assert "watch_log" not in client.get("/api/agents/governance").json()

@@ -101,6 +101,14 @@ class LessonSet(_Reply):
     _cap_lessons = _cap(5)
 
 
+class WatchExplanation(_Reply):
+    headline: str
+    explanation: str
+    suggestion: str
+    _clip = field_validator("headline", "explanation", "suggestion", mode="before")(
+        classmethod(_clip_text))
+
+
 # identifying top-level key -> strict model
 _BY_KEY: dict[str, type[_Reply]] = {
     "decision": GovernanceDecision,
@@ -110,6 +118,7 @@ _BY_KEY: dict[str, type[_Reply]] = {
     "overfit": ValidationVerdict,
     "stance": DebateArgument,
     "lessons": LessonSet,
+    "headline": WatchExplanation,
 }
 
 

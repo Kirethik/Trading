@@ -276,9 +276,27 @@ agents:
     max_sleeve_pct: 0.25           # agent sleeve: max share of paper equity agents may hold
     max_orders_per_day: 20
     ledger_file: state/agent_ledger.json
+    lock_file: state/agent_sleeve.lock   # sleeve's own drawdown lock; never the main breaker.lock
   supervisor:
     heartbeat_seconds: 30
     heartbeat_file: state/agent_supervisor.json
+  pause_file: state/agents.paused  # written by the Watchman; expires on its own
+  # The Watchman: always-on live oversight. Fully automatic, always warns.
+  # Critical findings: pause other agents' buying + sell-only trim of the
+  # agent sleeve. Never touches the main system, risk limits or the hard lock.
+  watchman:
+    enabled: true
+    interval_seconds: 300
+    stale_minutes: 150             # trading loop silent this long while market open
+    big_loss_pct: -0.03            # main system daily P&L warning line
+    sleeve_loss_pct: -0.04         # agent sleeve daily P&L: critical
+    reconcile_tolerance: 0.02      # books vs broker quantity mismatch
+    failure_streak: 5
+    budget_warn_pct: 0.8
+    pause_hours: 4
+    trim_fraction: 0.5             # share of each agent holding sold on a critical finding
+    realert_hours: 6               # repeat an unresolved alert this often
+    max_explanations_per_hour: 6   # Gemini calls; beyond this the plain rule text is used
 
 # ============================================================
 # Web dashboard (FastAPI on EC2 :80). Read-only views + graphs +

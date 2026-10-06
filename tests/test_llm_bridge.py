@@ -10,6 +10,7 @@ from regime_trader.govern import llm_bridge
 def _reset(monkeypatch):
     monkeypatch.setenv("ALPACA_PAPER", "true")
     monkeypatch.setattr(llm_bridge.guards, "kill_switch_engaged", lambda path=None: False)
+    monkeypatch.setattr(llm_bridge.guards, "agents_paused", lambda path=None: None)
 
 
 def test_unavailable_without_google_key(monkeypatch):
@@ -47,4 +48,10 @@ def test_escalate_delegates_to_runtime(monkeypatch):
 def test_escalation_disabled_in_config(monkeypatch):
     monkeypatch.setenv("GOOGLE_API_KEY", "k")
     monkeypatch.setattr(llm_bridge, "_enabled", lambda: False)
+    assert llm_bridge.available() is False
+
+
+def test_unavailable_while_watchman_pause_active(monkeypatch):
+    monkeypatch.setenv("GOOGLE_API_KEY", "k")
+    monkeypatch.setattr(llm_bridge.guards, "agents_paused", lambda path=None: {"reason": "x"})
     assert llm_bridge.available() is False

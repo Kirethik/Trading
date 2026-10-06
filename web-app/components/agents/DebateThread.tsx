@@ -26,7 +26,7 @@ function Bubble({ who, side, align }: { who: typeof TUNER; side: DebateSide | nu
           </> : null}
         </div>
         {side ? (
-          <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, lineHeight: 1.55, color: "var(--text-primary)" }}>
+          <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, lineHeight: 1.55, color: "var(--text-primary)", listStyle: "disc" }}>
             {side.points.map((p, i) => <li key={i}>{p}</li>)}
           </ul>
         ) : <span style={{ fontSize: 13, color: "var(--text-muted)" }}>Couldn&apos;t take part this time.</span>}

@@ -10,6 +10,7 @@ import { AgentAvatar, StatusLight, timeAgo } from "@/components/agents/shared";
 import { DiaryTimeline } from "@/components/agents/DiaryTimeline";
 import { LessonCard } from "@/components/agents/LessonCard";
 import { DebateThread } from "@/components/agents/DebateThread";
+import { HealthBanner, WatchLog } from "@/components/agents/WatchViews";
 
 function Section({ title, hint, children }: { title: string; hint: string; children: ReactNode }) {
   return (
@@ -92,6 +93,19 @@ function ProfileInner() {
         ))}
       </div>
 
+      {p.watch ? <HealthBanner watch={p.watch} /> : null}
+
+      {p.watch_log ? (
+        <Section title="What I've seen" hint="Every problem I spotted, what I did about it on my own, and what I suggest — newest first.">
+          <WatchLog events={p.watch_log} />
+        </Section>
+      ) : null}
+
+      {p.watch_log ? (
+        <Section title="My diary" hint="Everything I did, newest first, in plain words.">
+          <DiaryTimeline items={p.diary} color={p.color} />
+        </Section>
+      ) : <>
       <Section title="What I've been looking at" hint="The strategies and numbers I studied most recently — bigger glow means more often.">
         <Chips items={p.looked_at.strategies} color={p.color} empty="I haven't studied any strategies yet." />
         <Chips items={p.looked_at.numbers} color="#8891A0" empty="" />
@@ -116,6 +130,7 @@ function ProfileInner() {
             : <p style={{ fontSize: 13, color: "var(--text-muted)", margin: 0 }}>No debates yet.</p>}
         </Section>
       </div>
+      </>}
     </main>
   );
 }
